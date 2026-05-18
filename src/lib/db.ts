@@ -1,11 +1,8 @@
 import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@supabase/supabase-js'
 
-// Singleton — reuse the same client so session state is shared across all calls
-let _client: SupabaseClient | null = null
-function db(): SupabaseClient {
-  if (!_client) _client = createClient()
-  return _client
+// Fresh client each call — reads session from localStorage on every use
+function db() {
+  return createClient()
 }
 
 // Games
