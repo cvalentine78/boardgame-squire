@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getGames, getPlayers, insertSession, insertPlayers } from '@/lib/db'
 
@@ -12,6 +12,10 @@ function generateCode() {
 }
 
 export default function NewSessionPage() {
+  return <Suspense><NewSessionForm /></Suspense>
+}
+
+function NewSessionForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
 

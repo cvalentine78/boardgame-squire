@@ -23,7 +23,7 @@ export default function GameDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
-    getGame(id).then((data: Game) => {
+    getGame(id).then((data) => {
       setGame(data)
       setLoading(false)
     })

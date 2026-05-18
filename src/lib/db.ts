@@ -8,7 +8,8 @@ const headers = {
   Prefer: 'return=representation',
 }
 
-async function get(table: string, params = '') {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function get(table: string, params = ''): Promise<any> {
   const res = await fetch(`${URL}/rest/v1/${table}?${params}`, { headers })
   return res.json()
 }
@@ -41,7 +42,7 @@ export const getGames = () =>
   get('games', 'select=id,name,min_players,max_players,scoring_categories&order=name')
 
 export const getGame = (id: string) =>
-  get('games', `select=*&id=eq.${id}`).then((d: unknown[]) => d[0])
+  get('games', `select=*&id=eq.${id}`).then((d: any[]) => d[0])
 
 export const insertGame = (data: object) => post('games', data)
 
@@ -56,10 +57,10 @@ export const getSessions = () =>
   get('game_sessions', 'select=*,games(name),session_players(player_name)&order=created_at.desc')
 
 export const getSession = (id: string) =>
-  get('game_sessions', `select=*,games(name,rules_pdf_url,scoring_categories)&id=eq.${id}&order=created_at.desc`).then((d: unknown[]) => d[0])
+  get('game_sessions', `select=*,games(name,rules_pdf_url,scoring_categories)&id=eq.${id}&order=created_at.desc`).then((d: any[]) => d[0])
 
 export const insertSession = (data: object) =>
-  post('game_sessions', data).then((d: unknown[]) => d[0])
+  post('game_sessions', data).then((d: any[]) => d[0])
 
 export const updateSession = (id: string, data: object) =>
   patch('game_sessions', `id=eq.${id}`, data)

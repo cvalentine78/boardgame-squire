@@ -43,7 +43,7 @@ export default function EditGamePage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getGame(id).then((game: Game) => {
+    getGame(id).then((game) => {
       if (game) {
         setName(game.name)
         setDescription(game.description ?? '')
