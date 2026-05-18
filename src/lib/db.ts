@@ -163,6 +163,96 @@ export async function deletePlayer(id: string) {
   if (error) throw new Error(error.message)
 }
 
+// Parties
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no O/0 or I/1
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
+export async function getMyParty() {
+  const client = db()
+  const { data: { user } } = await client.auth.getUser()
+  if (!user) return null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: membership } = await (client as any)
+    .from('party_members')
+    .select('party_id, parties(id, name, invite_code)')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership) return null
+
+  const party = Array.isArray(membership.parties) ? membership.parties[0] : membership.parties
+  if (!party) return null
+
+  const { data: members } = await client
+    .from('party_members')
+    .select('user_id, display_name, joined_at')
+    .eq('party_id', membership.party_id)
+    .order('joined_at')
+
+  return { ...party, members: members ?? [], myUserId: user.id }
+}
+
+export async function createParty(name: string) {
+  const client = db()
+  const { data: { user } } = await client.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+
+  const { data: party, error } = await client
+    .from('parties')
+    .insert({ name, invite_code: generateInviteCode(), created_by: user.id })
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+
+  const displayName = (user.user_metadata?.full_name as string) ?? user.email ?? 'Unknown'
+  const { error: me } = await client
+    .from('party_members')
+    .insert({ party_id: party.id, user_id: user.id, display_name: displayName })
+  if (me) throw new Error(me.message)
+
+  return party
+}
+
+export async function joinPartyByCode(code: string) {
+  const client = db()
+  const { data: { user } } = await client.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+
+  const { data: party, error: findErr } = await client
+    .from('parties')
+    .select('id, name')
+    .eq('invite_code', code.toUpperCase().trim())
+    .maybeSingle()
+  if (findErr || !party) throw new Error('Party not found. Check the code and try again.')
+
+  const displayName = (user.user_metadata?.full_name as string) ?? user.email ?? 'Unknown'
+  const { error } = await client
+    .from('party_members')
+    .insert({ party_id: party.id, user_id: user.id, display_name: displayName })
+  if (error) {
+    if (error.code === '23505') throw new Error("You're already in this party.")
+    throw new Error(error.message)
+  }
+
+  return party
+}
+
+export async function leaveParty(partyId: string) {
+  const client = db()
+  const { data: { user } } = await client.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+
+  const { error } = await client
+    .from('party_members')
+    .delete()
+    .eq('party_id', partyId)
+    .eq('user_id', user.id)
+  if (error) throw new Error(error.message)
+}
+
 // Scores
 export async function getScores(sessionId: string) {
   const { data, error } = await db()
