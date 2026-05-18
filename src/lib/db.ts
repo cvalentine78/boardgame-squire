@@ -1,103 +1,200 @@
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import { createClient } from '@/lib/supabase/client'
 
-const headers = {
-  apikey: KEY,
-  Authorization: `Bearer ${KEY}`,
-  'Content-Type': 'application/json',
-  Prefer: 'return=representation',
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function get(table: string, params = ''): Promise<any> {
-  const res = await fetch(`${URL}/rest/v1/${table}?${params}`, { headers })
-  return res.json()
-}
-
-async function post(table: string, body: object) {
-  const res = await fetch(`${URL}/rest/v1/${table}`, {
-    method: 'POST', headers, body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-async function patch(table: string, params: string, body: object) {
-  const res = await fetch(`${URL}/rest/v1/${table}?${params}`, {
-    method: 'PATCH', headers, body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-async function del(table: string, params: string) {
-  const res = await fetch(`${URL}/rest/v1/${table}?${params}`, {
-    method: 'DELETE', headers,
-  })
-  if (!res.ok) throw new Error(await res.text())
+// Each call creates a client — cheap, just reads stored session from localStorage
+function db() {
+  return createClient()
 }
 
 // Games
-export const getGames = () =>
-  get('games', 'select=id,name,min_players,max_players,scoring_categories&order=name')
+export async function getGames() {
+  const { data, error } = await db()
+    .from('games')
+    .select('id,name,min_players,max_players,scoring_categories')
+    .order('name')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const getGame = (id: string) =>
-  get('games', `select=*&id=eq.${id}`).then((d: any[]) => d[0])
+export async function getGame(id: string) {
+  const { data, error } = await db()
+    .from('games')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
 
-export const insertGame = (data: object) => post('games', data)
+export async function insertGame(body: object) {
+  const { data, error } = await db()
+    .from('games')
+    .insert(body)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
 
-export const updateGame = (id: string, data: object) =>
-  patch('games', `id=eq.${id}`, data)
+export async function updateGame(id: string, body: object) {
+  const { error } = await db()
+    .from('games')
+    .update(body)
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
 
-export const deleteGame = (id: string) =>
-  del('games', `id=eq.${id}`)
+export async function deleteGame(id: string) {
+  const { error } = await db()
+    .from('games')
+    .delete()
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
 
 // Sessions
-export const getSessions = () =>
-  get('game_sessions', 'select=*,games(name),session_players(player_name)&order=created_at.desc')
+export async function getSessions() {
+  const { data, error } = await db()
+    .from('game_sessions')
+    .select('*,games(name),session_players(player_name)')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const getSession = (id: string) =>
-  get('game_sessions', `select=*,games(name,rules_pdf_url,scoring_categories)&id=eq.${id}&order=created_at.desc`).then((d: any[]) => d[0])
+export async function getSession(id: string) {
+  const { data, error } = await db()
+    .from('game_sessions')
+    .select('*,games(name,rules_pdf_url,scoring_categories)')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
 
-export const insertSession = (data: object) =>
-  post('game_sessions', data).then((d: any[]) => d[0])
+export async function insertSession(body: object) {
+  const { data, error } = await db()
+    .from('game_sessions')
+    .insert(body)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
 
-export const updateSession = (id: string, data: object) =>
-  patch('game_sessions', `id=eq.${id}`, data)
+export async function updateSession(id: string, body: object) {
+  const { error } = await db()
+    .from('game_sessions')
+    .update(body)
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
 
-export const deleteSession = (id: string) =>
-  del('game_sessions', `id=eq.${id}`)
+export async function deleteSession(id: string) {
+  const { error } = await db()
+    .from('game_sessions')
+    .delete()
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
 
-// Players
-export const getSessionPlayers = (sessionId: string) =>
-  get('session_players', `select=id,player_name,is_winner&session_id=eq.${sessionId}&order=turn_order`)
+// Session players
+export async function getSessionPlayers(sessionId: string) {
+  const { data, error } = await db()
+    .from('session_players')
+    .select('id,player_name,is_winner')
+    .eq('session_id', sessionId)
+    .order('turn_order')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const getAllSessionPlayers = () =>
-  get('session_players', 'select=player_name,session_id,game_sessions(id,status,winner_name,games(name))')
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getAllSessionPlayers(): Promise<any[]> {
+  const { data, error } = await db()
+    .from('session_players')
+    .select('player_name,session_id,game_sessions(id,status,winner_name,games(name))')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as any[]
+}
 
-export const insertPlayers = (rows: object[]) => post('session_players', rows)
+export async function insertPlayers(rows: object[]) {
+  const { data, error } = await db()
+    .from('session_players')
+    .insert(rows)
+    .select()
+  if (error) throw new Error(error.message)
+  return data
+}
 
-export const updatePlayerWinner = (sessionId: string, playerName: string) =>
-  patch('session_players', `session_id=eq.${sessionId}&player_name=eq.${encodeURIComponent(playerName)}`, { is_winner: true })
+export async function updatePlayerWinner(sessionId: string, playerName: string) {
+  const { error } = await db()
+    .from('session_players')
+    .update({ is_winner: true })
+    .eq('session_id', sessionId)
+    .eq('player_name', playerName)
+  if (error) throw new Error(error.message)
+}
 
-// Players
-export const getPlayers = () =>
-  get('players', 'select=*&order=name')
+// Players roster
+export async function getPlayers() {
+  const { data, error } = await db()
+    .from('players')
+    .select('*')
+    .order('name')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const insertPlayer = (name: string) =>
-  post('players', { name })
+export async function insertPlayer(name: string) {
+  const { data, error } = await db()
+    .from('players')
+    .insert({ name })
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
 
-export const deletePlayer = (id: string) =>
-  del('players', `id=eq.${id}`)
+export async function deletePlayer(id: string) {
+  const { error } = await db()
+    .from('players')
+    .delete()
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
 
 // Scores
-export const getScores = (sessionId: string) =>
-  get('scores', `select=player_name,points,round&session_id=eq.${sessionId}&order=round`)
+export async function getScores(sessionId: string) {
+  const { data, error } = await db()
+    .from('scores')
+    .select('player_name,points,round')
+    .eq('session_id', sessionId)
+    .order('round')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const getAllScores = () =>
-  get('scores', 'select=player_name,points,session_id')
+export async function getAllScores() {
+  const { data, error } = await db()
+    .from('scores')
+    .select('player_name,points,session_id')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const insertScores = (rows: object[]) => post('scores', rows)
+export async function insertScores(rows: object[]) {
+  const { data, error } = await db()
+    .from('scores')
+    .insert(rows)
+    .select()
+  if (error) throw new Error(error.message)
+  return data
+}
 
-export const deleteScores = (sessionId: string) =>
-  del('scores', `session_id=eq.${sessionId}`)
+export async function deleteScores(sessionId: string) {
+  const { error } = await db()
+    .from('scores')
+    .delete()
+    .eq('session_id', sessionId)
+  if (error) throw new Error(error.message)
+}
