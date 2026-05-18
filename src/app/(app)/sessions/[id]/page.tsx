@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getSession, getSessionPlayers, getScores, insertScores, deleteScores, updatePlayerWinner, updateSession, deleteSession, insertSession, insertPlayers } from '@/lib/db'
+import { getSession, getSessionPlayers, getScores, insertScores, deleteScores, upsertScore, deleteSingleScore, updatePlayerWinner, updateSession, deleteSession, insertSession, insertPlayers } from '@/lib/db'
 
 type Player = { id: string; name: string; is_winner: boolean }
 type RoundRow = { id: string; scores: Record<string, string> }
@@ -118,26 +118,28 @@ export default function SessionPage() {
   }
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastEdit = useRef<{ rowId: string; playerName: string } | null>(null)
 
   function updateScore(rowId: string, playerName: string, value: string) {
     setRows(prev => {
       const updated = prev.map(r =>
         r.id === rowId ? { ...r, scores: { ...r.scores, [playerName]: value } } : r
       )
-      // debounced auto-save: wait 800ms after last keystroke
+      // Save only the changed cell — avoids overwriting other players' scores
+      lastEdit.current = { rowId, playerName }
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
       autoSaveTimer.current = setTimeout(async () => {
-        await deleteScores(id)
-        const inserts: object[] = []
-        updated.forEach((row, roundIdx) => {
-          players.forEach(p => {
-            const val = parseInt(row.scores[p.name] ?? '')
-            if (!isNaN(val)) {
-              inserts.push({ session_id: id, player_name: p.name, points: val, round: roundIdx + 1 })
-            }
-          })
-        })
-        if (inserts.length > 0) await insertScores(inserts)
+        const edit = lastEdit.current
+        if (!edit) return
+        const row = updated.find(r => r.id === edit.rowId)
+        if (!row) return
+        const roundIdx = updated.findIndex(r => r.id === edit.rowId)
+        const val = parseInt(row.scores[edit.playerName] ?? '')
+        if (isNaN(val)) {
+          await deleteSingleScore(id, edit.playerName, roundIdx + 1)
+        } else {
+          await upsertScore({ session_id: id, player_name: edit.playerName, points: val, round: roundIdx + 1 })
+        }
       }, 800)
       return updated
     })

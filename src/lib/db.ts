@@ -285,6 +285,25 @@ export async function insertScores(rows: object[]) {
   return data
 }
 
+export async function upsertScore(row: {
+  session_id: string; player_name: string; points: number; round: number
+}) {
+  const { error } = await db()
+    .from('scores')
+    .upsert(row, { onConflict: 'session_id,player_name,round' })
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteSingleScore(sessionId: string, playerName: string, round: number) {
+  const { error } = await db()
+    .from('scores')
+    .delete()
+    .eq('session_id', sessionId)
+    .eq('player_name', playerName)
+    .eq('round', round)
+  if (error) throw new Error(error.message)
+}
+
 export async function deleteScores(sessionId: string) {
   const { error } = await db()
     .from('scores')
