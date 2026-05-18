@@ -157,17 +157,17 @@ export default function SessionPage() {
 
   async function handleSave() {
     setSaving(true)
-    await deleteScores(id)
-    const inserts: object[] = []
+    // Upsert each cell individually so we don't overwrite other players' scores
+    const upserts: Promise<void>[] = []
     rows.forEach((row, roundIdx) => {
       players.forEach(p => {
         const val = parseInt(row.scores[p.name] ?? '')
         if (!isNaN(val)) {
-          inserts.push({ session_id: id, player_name: p.name, points: val, round: roundIdx + 1 })
+          upserts.push(upsertScore({ session_id: id, player_name: p.name, points: val, round: roundIdx + 1 }))
         }
       })
     })
-    if (inserts.length > 0) await insertScores(inserts)
+    await Promise.all(upserts)
     setSaving(false)
   }
 
