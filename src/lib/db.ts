@@ -1,8 +1,11 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-// Each call creates a client — cheap, just reads stored session from localStorage
-function db() {
-  return createClient()
+// Singleton — reuse the same client so session state is shared across all calls
+let _client: SupabaseClient | null = null
+function db(): SupabaseClient {
+  if (!_client) _client = createClient()
+  return _client
 }
 
 // Games
@@ -171,7 +174,8 @@ function generateInviteCode() {
 
 export async function getMyParty() {
   const client = db()
-  const { data: { user } } = await client.auth.getUser()
+  const { data: { session } } = await client.auth.getSession()
+  const user = session?.user
   if (!user) return null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -197,7 +201,8 @@ export async function getMyParty() {
 
 export async function createParty(name: string) {
   const client = db()
-  const { data: { user } } = await client.auth.getUser()
+  const { data: { session } } = await client.auth.getSession()
+  const user = session?.user
   if (!user) throw new Error('Not signed in')
 
   const { data: party, error } = await client
@@ -218,7 +223,8 @@ export async function createParty(name: string) {
 
 export async function joinPartyByCode(code: string) {
   const client = db()
-  const { data: { user } } = await client.auth.getUser()
+  const { data: { session } } = await client.auth.getSession()
+  const user = session?.user
   if (!user) throw new Error('Not signed in')
 
   const { data: party, error: findErr } = await client
@@ -242,7 +248,8 @@ export async function joinPartyByCode(code: string) {
 
 export async function leaveParty(partyId: string) {
   const client = db()
-  const { data: { user } } = await client.auth.getUser()
+  const { data: { session } } = await client.auth.getSession()
+  const user = session?.user
   if (!user) throw new Error('Not signed in')
 
   const { error } = await client
