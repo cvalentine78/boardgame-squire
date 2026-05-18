@@ -74,20 +74,23 @@ export default function SessionPage() {
 
     const cats: string[] = sessionData?.games?.scoring_categories ?? []
 
-    if (scoreData && scoreData.length > 0) {
-      const roundMap: Record<number, Record<string, string>> = {}
-      scoreData.forEach((s: { round: number; player_name: string; points: number }) => {
-        if (!roundMap[s.round]) roundMap[s.round] = {}
-        roundMap[s.round][s.player_name] = String(s.points)
-      })
-      const roundRows = Object.entries(roundMap)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([round, sc]) => ({ id: round, scores: sc }))
-      setRows(roundRows)
-    } else if (cats.length > 0) {
-      setRows(cats.map((_, i) => ({ id: String(i + 1), scores: {} })))
+    // Build a round→scores map from whatever is in the database
+    const roundMap: Record<number, Record<string, string>> = {}
+    ;(scoreData ?? []).forEach((s: { round: number; player_name: string; points: number }) => {
+      if (!roundMap[s.round]) roundMap[s.round] = {}
+      roundMap[s.round][s.player_name] = String(s.points)
+    })
+
+    if (cats.length > 0) {
+      // Category game: always show every category row, fill in scores where they exist
+      setRows(cats.map((_, i) => ({ id: String(i + 1), scores: roundMap[i + 1] ?? {} })))
     } else {
-      setRows(Array.from({ length: 10 }, (_, i) => ({ id: String(i + 1), scores: {} })))
+      // Round-based game: always show at least 10 rows, more if scores exist beyond that
+      const maxRound = Math.max(10, ...Object.keys(roundMap).map(Number))
+      setRows(Array.from({ length: maxRound }, (_, i) => ({
+        id: String(i + 1),
+        scores: roundMap[i + 1] ?? {},
+      })))
     }
 
     setLoading(false)
