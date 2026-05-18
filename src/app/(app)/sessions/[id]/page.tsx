@@ -92,12 +92,17 @@ export default function SessionPage() {
 
     setLoading(false)
 
-    // Animate to the first player on every load
+    // Only animate on fresh start (no scores yet). On resume, just show quietly.
     if (sessionData?.status === 'active' && pl.length > 0) {
       const stored = localStorage.getItem(`tabletopiq_first_${id}`)
       const target = stored ?? pl[Math.floor(Math.random() * pl.length)].name
       if (!stored) localStorage.setItem(`tabletopiq_first_${id}`, target)
-      setTimeout(() => animateTo(pl, target), 600)
+      const isResume = scoreData && scoreData.length > 0
+      if (isResume) {
+        setFirstPlayer(target)
+      } else {
+        setTimeout(() => animateTo(pl, target), 600)
+      }
     }
   }, [id])
 
