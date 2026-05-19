@@ -338,6 +338,29 @@ export async function leaveParty(partyId: string) {
   if (error) throw new Error(error.message)
 }
 
+// Messages
+export async function getMessages(sessionId: string) {
+  const { data, error } = await db()
+    .from('messages')
+    .select('id,user_id,display_name,content,created_at')
+    .eq('session_id', sessionId)
+    .order('created_at')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function sendMessage(sessionId: string, content: string) {
+  const client = db()
+  const { data: { session } } = await client.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Not signed in')
+  const displayName = (user.user_metadata?.full_name as string) ?? user.email ?? 'Player'
+  const { error } = await client
+    .from('messages')
+    .insert({ session_id: sessionId, user_id: user.id, display_name: displayName, content })
+  if (error) throw new Error(error.message)
+}
+
 // Scores
 export async function getScores(sessionId: string) {
   const { data, error } = await db()

@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getSession, getSessionPlayers, getScores, insertScores, deleteScores, upsertScore, deleteSingleScore, updatePlayerWinner, updateSession, deleteSession, insertSession, insertPlayers } from '@/lib/db'
+import { createClient } from '@/lib/supabase/client'
+import { getSession, getSessionPlayers, getScores, insertScores, deleteScores, upsertScore, deleteSingleScore, updatePlayerWinner, updateSession, deleteSession, insertSession, insertPlayers, getMessages, sendMessage } from '@/lib/db'
 
 type Player = { id: string; name: string; is_winner: boolean }
 type RoundRow = { id: string; scores: Record<string, string> }
+type Message = { id: string; user_id: string | null; display_name: string; content: string; created_at: string }
 type Session = {
   id: string; status: string; join_code: string; game_id: string; winner_name?: string | null
   first_player?: string | null
@@ -32,6 +34,16 @@ export default function SessionPage() {
   const [firstPlayer, setFirstPlayer] = useState<string | null>(null)
   const [spinning, setSpinning] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Chat
+  const [messages, setMessages] = useState<Message[]>([])
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatInput, setChatInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [unread, setUnread] = useState(0)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const sessionRef = useRef<Session | null>(null)
 
 
   function animateTo(playerList: Player[], target: string) {
@@ -110,8 +122,86 @@ export default function SessionPage() {
     }
   }, [id])
 
+  // Keep a ref to session so realtime callbacks can read categories without stale closure
+  useEffect(() => { sessionRef.current = session }, [session])
+
+  // Reload only scores (used by realtime — avoids disrupting first-player animation)
+  const reloadScores = useCallback(async () => {
+    // Don't clobber a cell the user is actively typing in
+    if (document.activeElement?.tagName === 'INPUT') return
+    const scoreData = await getScores(id)
+    const cats: string[] = sessionRef.current?.games?.scoring_categories ?? []
+    const roundMap: Record<number, Record<string, string>> = {}
+    ;(scoreData ?? []).forEach((s: { round: number; player_name: string; points: number }) => {
+      if (!roundMap[s.round]) roundMap[s.round] = {}
+      roundMap[s.round][s.player_name] = String(s.points)
+    })
+    if (cats.length > 0) {
+      setRows(cats.map((_, i) => ({ id: String(i + 1), scores: roundMap[i + 1] ?? {} })))
+    } else {
+      const maxRound = Math.max(10, ...Object.keys(roundMap).map(Number))
+      setRows(Array.from({ length: maxRound }, (_, i) => ({
+        id: String(i + 1),
+        scores: roundMap[i + 1] ?? {},
+      })))
+    }
+  }, [id])
+
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Load messages and current user on mount
+  useEffect(() => {
+    getMessages(id).then(data => setMessages(data as Message[]))
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      setMyUserId(session?.user?.id ?? null)
+    })
+  }, [id])
+
+  // Supabase Realtime channel — scores + chat
+  useEffect(() => {
+    const channel = createClient()
+      .channel(`session-${id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'scores',
+        filter: `session_id=eq.${id}`,
+      }, () => { reloadScores() })
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'messages',
+        filter: `session_id=eq.${id}`,
+      }, (payload) => {
+        const msg = payload.new as Message
+        setMessages(prev => {
+          // Avoid duplicates (our own send is already in state optimistically)
+          if (prev.some(m => m.id === msg.id)) return prev
+          return [...prev, msg]
+        })
+        setChatOpen(prev => {
+          if (!prev) setUnread(u => u + 1)
+          return prev
+        })
+      })
+      .subscribe()
+
+    return () => { channel.unsubscribe() }
+  }, [id, reloadScores])
+
+
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (chatOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, chatOpen])
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault()
+    const text = chatInput.trim()
+    if (!text || sending) return
+    setSending(true)
+    setChatInput('')
+    try {
+      await sendMessage(id, text)
+    } catch { /* ignore */ }
+    setSending(false)
+  }
 
   function addRow() {
     setRows(prev => [...prev, { id: String(prev.length + 1), scores: {} }])
@@ -461,6 +551,79 @@ export default function SessionPage() {
           </div>
         </div>
       )}
+
+      {/* Chat */}
+      <div className="mt-4 bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+        {/* Chat header / toggle */}
+        <button
+          onClick={() => { setChatOpen(v => !v); setUnread(0) }}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-700/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-lg">💬</span>
+            <span className="font-semibold text-white text-sm">Match Chat</span>
+            {!chatOpen && unread > 0 && (
+              <span className="bg-indigo-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{unread} new</span>
+            )}
+            {messages.length > 0 && (
+              <span className="text-xs text-slate-500">{messages.length} message{messages.length !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          <span className="text-slate-400 text-sm">{chatOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {chatOpen && (
+          <div className="border-t border-slate-700">
+            {/* Message list */}
+            <div className="h-56 overflow-y-auto px-3 py-3 space-y-2">
+              {messages.length === 0 ? (
+                <p className="text-center text-slate-500 text-sm py-8">No messages yet — say something! 👋</p>
+              ) : (
+                messages.map(msg => {
+                  const isMe = msg.user_id === myUserId
+                  return (
+                    <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                      {!isMe && (
+                        <span className="text-xs text-slate-400 mb-0.5 ml-1">{msg.display_name}</span>
+                      )}
+                      <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                        isMe
+                          ? 'bg-indigo-600 text-white rounded-br-sm'
+                          : 'bg-slate-700 text-slate-100 rounded-bl-sm'
+                      }`}>
+                        {msg.content}
+                      </div>
+                      <span className="text-xs text-slate-600 mt-0.5 mx-1">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <form onSubmit={handleSend} className="border-t border-slate-700 flex gap-2 p-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                placeholder="Type a message..."
+                maxLength={500}
+                className="flex-1 bg-slate-700 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
+              />
+              <button
+                type="submit"
+                disabled={!chatInput.trim() || sending}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0"
+              >
+                Send
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
 
       {/* Delete Session */}
       <div className="mt-4">
