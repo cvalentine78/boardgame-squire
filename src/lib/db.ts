@@ -213,11 +213,28 @@ export async function getMyParties() {
   const user = session?.user
   if (!user) return []
 
+  // Try with game join first; fall back to basic select if game_id column doesn't exist yet
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: memberships } = await (client as any)
+  let memberships: any[] | null = null
+  let hasGameColumn = true
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: mFull, error: mErr } = await (client as any)
     .from('party_members')
     .select('party_id, parties(id, name, invite_code, game_id, games(name))')
     .eq('user_id', user.id)
+
+  if (mErr) {
+    hasGameColumn = false
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: mBasic } = await (client as any)
+      .from('party_members')
+      .select('party_id, parties(id, name, invite_code)')
+      .eq('user_id', user.id)
+    memberships = mBasic
+  } else {
+    memberships = mFull
+  }
 
   if (!memberships || memberships.length === 0) return []
 
@@ -232,9 +249,10 @@ export async function getMyParties() {
       .eq('party_id', m.party_id)
       .order('joined_at')
 
-    const game = Array.isArray(party.games) ? party.games[0] : party.games
+    const game = hasGameColumn ? (Array.isArray(party.games) ? party.games[0] : party.games) : null
     result.push({
       ...party,
+      game_id: party.game_id ?? null,
       game_name: game?.name ?? null,
       members: members ?? [],
       myUserId: user.id,

@@ -47,10 +47,15 @@ export default function PartyPage() {
 
   async function reload() {
     setLoading(true)
-    const [p, g] = await Promise.all([getMyParties(), getGames()])
-    setParties(p as Party[])
-    if (Array.isArray(g)) setGames(g)
-    setLoading(false)
+    try {
+      const [p, g] = await Promise.all([getMyParties(), getGames()])
+      setParties(p as Party[])
+      if (Array.isArray(g)) setGames(g)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load parties.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { reload() }, [])
