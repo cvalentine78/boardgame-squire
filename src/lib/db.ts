@@ -9,7 +9,7 @@ function db() {
 export async function getGames() {
   const { data, error } = await db()
     .from('games')
-    .select('id,name,min_players,max_players,scoring_categories')
+    .select('id,name,min_players,max_players,scoring_categories,is_shared')
     .order('name')
   if (error) throw new Error(error.message)
   return data ?? []
@@ -26,13 +26,24 @@ export async function getGame(id: string) {
 }
 
 export async function insertGame(body: object) {
-  const { data, error } = await db()
+  const client = db()
+  const { data: { session } } = await client.auth.getSession()
+  const userId = session?.user?.id ?? null
+  const { data, error } = await client
     .from('games')
-    .insert(body)
+    .insert({ ...body, created_by: userId })
     .select()
     .single()
   if (error) throw new Error(error.message)
   return data
+}
+
+export async function toggleGameShared(id: string, isShared: boolean) {
+  const { error } = await db()
+    .from('games')
+    .update({ is_shared: isShared })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }
 
 export async function updateGame(id: string, body: object) {
@@ -194,6 +205,36 @@ export async function getMyParty() {
     .order('joined_at')
 
   return { ...party, members: members ?? [], myUserId: user.id }
+}
+
+export async function getMyParties() {
+  const client = db()
+  const { data: { session } } = await client.auth.getSession()
+  const user = session?.user
+  if (!user) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: memberships } = await (client as any)
+    .from('party_members')
+    .select('party_id, parties(id, name, invite_code)')
+    .eq('user_id', user.id)
+
+  if (!memberships || memberships.length === 0) return []
+
+  const result = []
+  for (const m of memberships) {
+    const party = Array.isArray(m.parties) ? m.parties[0] : m.parties
+    if (!party) continue
+
+    const { data: members } = await client
+      .from('party_members')
+      .select('user_id, display_name, joined_at')
+      .eq('party_id', m.party_id)
+      .order('joined_at')
+
+    result.push({ ...party, members: members ?? [], myUserId: user.id })
+  }
+  return result
 }
 
 export async function createParty(name: string) {

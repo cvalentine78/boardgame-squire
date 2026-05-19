@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getGames, deleteGame } from '@/lib/db'
+import { getGames, deleteGame, toggleGameShared } from '@/lib/db'
 
 type Game = {
   id: string
@@ -11,6 +11,7 @@ type Game = {
   min_players: number | null
   max_players: number | null
   scoring_categories: string[] | null
+  is_shared: boolean | null
 }
 
 export default function GamesPage() {
@@ -18,6 +19,7 @@ export default function GamesPage() {
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   async function fetchGames() {
     const data = await getGames()
@@ -31,6 +33,20 @@ export default function GamesPage() {
     await deleteGame(id)
     setConfirmId(null)
     fetchGames()
+  }
+
+  async function handleToggleShare(game: Game) {
+    setTogglingId(game.id)
+    const newVal = !game.is_shared
+    // Optimistic update
+    setGames(prev => prev.map(g => g.id === game.id ? { ...g, is_shared: newVal } : g))
+    try {
+      await toggleGameShared(game.id, newVal)
+    } catch {
+      // Revert on error
+      setGames(prev => prev.map(g => g.id === game.id ? { ...g, is_shared: game.is_shared } : g))
+    }
+    setTogglingId(null)
   }
 
   return (
@@ -56,50 +72,68 @@ export default function GamesPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-2">
-          {games.map(game => (
-            <div key={game.id}>
-              {confirmId === game.id ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-3">
-                  <p className="flex-1 text-sm text-red-700">Delete <span className="font-semibold">{game.name}</span>?</p>
-                  <button onClick={() => setConfirmId(null)}
-                    className="text-sm px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 font-medium text-slate-700">
-                    Cancel
-                  </button>
-                  <button onClick={() => handleDelete(game.id)}
-                    className="text-sm px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium">
-                    Delete
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 shadow-sm">
-                  <Link href={`/games/${game.id}`}
-                    className="flex-1 flex items-center justify-between p-4 hover:bg-slate-50 rounded-l-xl transition-colors">
-                    <div>
-                      <div className="font-semibold text-slate-800">{game.name}</div>
-                      <div className="text-sm text-slate-500 mt-0.5">
-                        {game.min_players && game.max_players ? `${game.min_players}–${game.max_players} players` : ''}
-                        {game.scoring_categories && game.scoring_categories.length > 0
-                          ? `${game.min_players ? ' · ' : ''}${game.scoring_categories.length} scoring categories`
-                          : ''}
-                      </div>
-                    </div>
-                  </Link>
-                  <div className="flex items-center gap-1 pr-2 shrink-0">
-                    <button onClick={() => router.push(`/games/${game.id}/edit`)}
-                      className="p-2.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                      ✏️
+        <>
+          <p className="text-xs text-slate-500">
+            Tap the 🔒 / 🌐 icon to toggle whether a game is shared with your party.
+          </p>
+          <div className="space-y-2">
+            {games.map(game => (
+              <div key={game.id}>
+                {confirmId === game.id ? (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-3">
+                    <p className="flex-1 text-sm text-red-700">Delete <span className="font-semibold">{game.name}</span>?</p>
+                    <button onClick={() => setConfirmId(null)}
+                      className="text-sm px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 font-medium text-slate-700">
+                      Cancel
                     </button>
-                    <button onClick={() => setConfirmId(game.id)}
-                      className="p-2.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100">
-                      🗑
+                    <button onClick={() => handleDelete(game.id)}
+                      className="text-sm px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium">
+                      Delete
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                ) : (
+                  <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <Link href={`/games/${game.id}`}
+                      className="flex-1 flex items-center justify-between p-4 hover:bg-slate-50 rounded-l-xl transition-colors">
+                      <div>
+                        <div className="font-semibold text-slate-800">{game.name}</div>
+                        <div className="text-sm text-slate-500 mt-0.5">
+                          {game.min_players && game.max_players ? `${game.min_players}–${game.max_players} players` : ''}
+                          {game.scoring_categories && game.scoring_categories.length > 0
+                            ? `${game.min_players ? ' · ' : ''}${game.scoring_categories.length} scoring categories`
+                            : ''}
+                        </div>
+                      </div>
+                    </Link>
+                    <div className="flex items-center gap-1 pr-2 shrink-0">
+                      {/* Share toggle */}
+                      <button
+                        onClick={() => handleToggleShare(game)}
+                        disabled={togglingId === game.id}
+                        title={game.is_shared ? 'Shared with party — tap to make private' : 'Private — tap to share with party'}
+                        className={`p-2 rounded-lg transition-colors text-base ${
+                          game.is_shared
+                            ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {game.is_shared ? '🌐' : '🔒'}
+                      </button>
+                      <button onClick={() => router.push(`/games/${game.id}/edit`)}
+                        className="p-2.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                        ✏️
+                      </button>
+                      <button onClick={() => setConfirmId(game.id)}
+                        className="p-2.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100">
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getGame, deleteGame } from '@/lib/db'
+import { getGame, deleteGame, toggleGameShared } from '@/lib/db'
 
 type Game = {
   id: string
@@ -12,6 +12,7 @@ type Game = {
   max_players: number | null
   rules_pdf_url: string | null
   scoring_categories: string[] | null
+  is_shared: boolean | null
 }
 
 export default function GameDetailPage() {
@@ -21,6 +22,7 @@ export default function GameDetailPage() {
   const [game, setGame] = useState<Game | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [toggling, setToggling] = useState(false)
 
   useEffect(() => {
     getGame(id).then((data) => {
@@ -32,6 +34,19 @@ export default function GameDetailPage() {
   async function handleDelete() {
     await deleteGame(id)
     router.push('/games')
+  }
+
+  async function handleToggleShare() {
+    if (!game) return
+    setToggling(true)
+    const newVal = !game.is_shared
+    setGame(g => g ? { ...g, is_shared: newVal } : g)
+    try {
+      await toggleGameShared(id, newVal)
+    } catch {
+      setGame(g => g ? { ...g, is_shared: game.is_shared } : g)
+    }
+    setToggling(false)
   }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>
@@ -68,6 +83,31 @@ export default function GameDetailPage() {
           <p className="text-slate-600 text-sm pt-1 border-t border-slate-100">{game.description}</p>
         )}
       </div>
+
+      {/* Party sharing toggle */}
+      <button
+        onClick={handleToggleShare}
+        disabled={toggling}
+        className={`w-full flex items-center justify-between rounded-2xl px-5 py-4 transition-colors shadow-sm ${
+          game.is_shared
+            ? 'bg-emerald-50 border-2 border-emerald-300'
+            : 'bg-white border border-slate-200'
+        }`}
+      >
+        <div className="text-left">
+          <p className={`font-semibold text-sm ${game.is_shared ? 'text-emerald-700' : 'text-slate-700'}`}>
+            {game.is_shared ? '🌐 Shared with party' : '🔒 Private'}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {game.is_shared
+              ? 'Your party can see this game and use it in matches.'
+              : 'Only you can see this game. Tap to share with your party.'}
+          </p>
+        </div>
+        <div className={`w-11 h-6 rounded-full transition-colors relative ${game.is_shared ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${game.is_shared ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </div>
+      </button>
 
       {/* Actions */}
       <div className="flex flex-col gap-3">
