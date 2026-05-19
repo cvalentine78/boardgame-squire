@@ -216,7 +216,7 @@ export async function getMyParties() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: memberships } = await (client as any)
     .from('party_members')
-    .select('party_id, parties(id, name, invite_code)')
+    .select('party_id, parties(id, name, invite_code, game_id, games(name))')
     .eq('user_id', user.id)
 
   if (!memberships || memberships.length === 0) return []
@@ -232,20 +232,26 @@ export async function getMyParties() {
       .eq('party_id', m.party_id)
       .order('joined_at')
 
-    result.push({ ...party, members: members ?? [], myUserId: user.id })
+    const game = Array.isArray(party.games) ? party.games[0] : party.games
+    result.push({
+      ...party,
+      game_name: game?.name ?? null,
+      members: members ?? [],
+      myUserId: user.id,
+    })
   }
   return result
 }
 
-export async function updateParty(partyId: string, name: string) {
+export async function updateParty(partyId: string, fields: { name?: string; game_id?: string | null }) {
   const { error } = await db()
     .from('parties')
-    .update({ name })
+    .update(fields)
     .eq('id', partyId)
   if (error) throw new Error(error.message)
 }
 
-export async function createParty(name: string) {
+export async function createParty(name: string, gameId?: string | null) {
   const client = db()
   const { data: { session } } = await client.auth.getSession()
   const user = session?.user
@@ -253,7 +259,7 @@ export async function createParty(name: string) {
 
   const { data: party, error } = await client
     .from('parties')
-    .insert({ name, invite_code: generateInviteCode(), created_by: user.id })
+    .insert({ name, invite_code: generateInviteCode(), created_by: user.id, game_id: gameId ?? null })
     .select()
     .single()
   if (error) throw new Error(error.message)
