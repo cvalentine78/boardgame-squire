@@ -237,6 +237,14 @@ export async function getMyParties() {
   return result
 }
 
+export async function updateParty(partyId: string, name: string) {
+  const { error } = await db()
+    .from('parties')
+    .update({ name })
+    .eq('id', partyId)
+  if (error) throw new Error(error.message)
+}
+
 export async function createParty(name: string) {
   const client = db()
   const { data: { session } } = await client.auth.getSession()

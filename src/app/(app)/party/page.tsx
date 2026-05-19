@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getMyParties, createParty, joinPartyByCode, leaveParty } from '@/lib/db'
+import { getMyParties, createParty, joinPartyByCode, leaveParty, updateParty } from '@/lib/db'
 
 type Member = { user_id: string; display_name: string; joined_at: string }
 type Party = { id: string; name: string; invite_code: string; members: Member[]; myUserId: string }
@@ -12,6 +12,9 @@ export default function PartyPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [confirmLeaveId, setConfirmLeaveId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
+  const [savingName, setSavingName] = useState(false)
 
   // Create form
   const [showCreate, setShowCreate] = useState(false)
@@ -68,6 +71,26 @@ export default function PartyPage() {
     await leaveParty(partyId)
     setConfirmLeaveId(null)
     await reload()
+  }
+
+  function startEditing(party: Party) {
+    setEditingId(party.id)
+    setEditingName(party.name)
+    setExpandedId(party.id) // ensure card is open
+  }
+
+  async function commitRename(partyId: string) {
+    const trimmed = editingName.trim()
+    if (!trimmed) { setEditingId(null); return }
+    setSavingName(true)
+    try {
+      await updateParty(partyId, trimmed)
+      setParties(prev => prev.map(p => p.id === partyId ? { ...p, name: trimmed } : p))
+    } catch {
+      // ignore — name stays as-is
+    }
+    setEditingId(null)
+    setSavingName(false)
   }
 
   async function copyCode(party: Party) {
@@ -149,19 +172,55 @@ export default function PartyPage() {
                 {/* Party header */}
                 <div className="p-4 flex items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800 text-lg leading-tight">{party.name}</p>
+                    {editingId === party.id ? (
+                      <input
+                        autoFocus
+                        value={editingName}
+                        onChange={e => setEditingName(e.target.value)}
+                        onBlur={() => commitRename(party.id)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') commitRename(party.id)
+                          if (e.key === 'Escape') setEditingId(null)
+                        }}
+                        maxLength={40}
+                        className="w-full font-bold text-lg text-slate-800 bg-slate-100 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 group">
+                        <p className="font-bold text-slate-800 text-lg leading-tight">{party.name}</p>
+                        <button
+                          onClick={() => startEditing(party)}
+                          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-500 transition-all text-sm"
+                          title="Rename party"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    )}
                     <p className="text-xs text-slate-400 mt-0.5">{party.members.length} member{party.members.length !== 1 ? 's' : ''}</p>
                   </div>
-                  <button
-                    onClick={() => setExpandedId(expanded ? null : party.id)}
-                    className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors px-2 py-1"
-                  >
-                    {expanded ? 'Hide ▲' : 'Details ▼'}
-                  </button>
+                  {!savingName && (
+                    <button
+                      onClick={() => setExpandedId(expanded ? null : party.id)}
+                      className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors px-2 py-1 shrink-0"
+                    >
+                      {expanded ? 'Hide ▲' : 'Details ▼'}
+                    </button>
+                  )}
                 </div>
 
                 {expanded && (
                   <div className="border-t border-slate-100 px-4 pb-4 space-y-4 pt-4">
+                    {/* Rename */}
+                    {editingId !== party.id && (
+                      <button
+                        onClick={() => startEditing(party)}
+                        className="w-full flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-xl px-4 py-2.5 transition-colors"
+                      >
+                        ✏️ <span className="font-medium">Rename party</span>
+                      </button>
+                    )}
+
                     {/* Invite code */}
                     <div>
                       <p className="text-xs text-slate-400 uppercase tracking-wide font-bold mb-2">Invite Code</p>
