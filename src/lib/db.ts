@@ -150,20 +150,28 @@ export async function updatePlayerWinner(sessionId: string, playerName: string) 
 export async function getPlayers() {
   const { data, error } = await db()
     .from('players')
-    .select('*')
+    .select('id,name,avatar')
     .order('name')
   if (error) throw new Error(error.message)
   return data ?? []
 }
 
-export async function insertPlayer(name: string) {
+export async function insertPlayer(name: string, avatar?: string | null) {
   const { data, error } = await db()
     .from('players')
-    .insert({ name })
+    .insert({ name, avatar: avatar ?? null })
     .select()
     .single()
   if (error) throw new Error(error.message)
   return data
+}
+
+export async function updatePlayerAvatar(id: string, avatar: string | null) {
+  const { error } = await db()
+    .from('players')
+    .update({ avatar })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
 }
 
 export async function deletePlayer(id: string) {

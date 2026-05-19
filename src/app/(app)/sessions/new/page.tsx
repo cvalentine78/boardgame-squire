@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getGames, getPlayers, insertSession, insertPlayers } from '@/lib/db'
 
 type Game = { id: string; name: string; min_players: number | null; max_players: number | null }
-type Player = { id: string; name: string }
+type Player = { id: string; name: string; avatar: string | null }
 
 function generateCode() {
   return Math.random().toString(36).substring(2, 7).toUpperCase()
@@ -173,10 +173,15 @@ function NewSessionForm() {
                           ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed'
                           : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800'
                     }`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                      selected ? 'bg-white/20 text-white' : 'bg-white text-indigo-600'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      selected ? 'bg-white/20' : 'bg-white'
                     }`}>
-                      {selected ? '✓' : player.name.slice(0, 1).toUpperCase()}
+                      {selected
+                        ? <span className="text-white text-sm font-bold">✓</span>
+                        : player.avatar
+                          ? <span className="text-lg">{player.avatar}</span>
+                          : <span className="text-sm font-bold text-indigo-600">{player.name.slice(0, 1).toUpperCase()}</span>
+                      }
                     </div>
                     <span className="font-medium text-sm truncate">{player.name}</span>
                   </button>
