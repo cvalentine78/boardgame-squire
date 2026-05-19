@@ -5,58 +5,134 @@ import { getPlayers, insertPlayer, deletePlayer, updatePlayerAvatar } from '@/li
 
 type Player = { id: string; name: string; avatar: string | null }
 
-const AVATARS = [
-  // Hearts & love
-  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💕','💖','💝','💘','💟','❣️','💗','💓','💞','💌','🩷','🩵','🩶',
-  // Pets & familiar animals
-  '🐾','🐶','🐱','🐰','🐹','🐭','🐮','🐷','🐸','🐼','🐨','🐻','🦊','🐺','🦁','🐯',
-  // Wild animals
-  '🐘','🦒','🦓','🦏','🦛','🦘','🐪','🦙','🦬','🐎','🦌','🐿️','🦔','🐇',
-  // Birds
-  '🦉','🐧','🦅','🦆','🦜','🦢','🦩','🦚','🦃','🐦','🐤','🦤',
-  // Sea creatures
-  '🐬','🐙','🦀','🐢','🦈','🐠','🐟','🐡','🐳','🦭','🦑','🦐','🐊',
-  // Bugs & tiny creatures
-  '🦋','🐝','🐞','🐛','🕷️','🦗','🦂','🪲',
-  // Mythical & fantasy
-  '🐲','🦄','🧙','🦸','🧚','🧜','🧝','🧛','👻','🤖','👾','🎃','🧸',
-  // Plants & nature
-  '🌸','🌺','🌻','🌹','🌷','🌼','🍀','🌿','🍁','🌵','🌴','🌲','🎋','🍄','🌱','🌾','🪨','🪸',
-  // Sky & weather
-  '🌟','⭐','💫','✨','⚡','🔥','❄️','🌈','🌙','☀️','☄️','🌊','🌪️','🌀','⛅','🌤️','🌬️',
-  // Gems & elements
-  '💎','🔮','💠','🪩','🧊','🔶','🔷','🟣','🟢','🔴','🟡',
-  // Food & treats
-  '🍕','🌮','🍦','🧁','🎂','🍩','🍪','🍫','🍬','🍭','🍓','🍇','🍉','🍋','🍌','🍒','🍑','🫐','🥝','🌽','🧇','🥞',
-  // Games & competition
-  '🎮','🎯','🎲','🃏','🧩','🏆','⚔️','🛡️','🎳','🏅','🥇','🥈','🥉','🎰','♟️','🎱','🪃','🏹','🎣',
-  // Music & art
-  '🎸','🎹','🎺','🎻','🥁','🎵','🎶','🎨','🖌️','🎭',
-  // Sports
-  '⚽','🏀','🏈','⚾','🎾','🏐','🏉','🥊','🏄','🛹','🎿','🏂','🛷','🥋',
-  // Space & adventure
-  '🚀','🛸','🌍','🪐','🌌','🔭','🧭','⚓','🏔️','🗺️',
-  // Fun & party
-  '👑','🎩','🎪','🎠','🎡','🎢','🎁','🎀','🎊','🎉','🎈','🪅','🎆','🪄','🧨',
-  // Symbols & misc
-  '☯️','☮️','⚜️','🔱','🌐','💡','🔑','🗝️','🧲','🪬','🍀',
+const AVATAR_CATEGORIES: { label: string; icon: string; emojis: string[] }[] = [
+  {
+    label: 'Hearts',
+    icon: '❤️',
+    emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💕','💖','💝','💘','💟','❣️','💗','💓','💞','💌','🩷','🩵','🩶'],
+  },
+  {
+    label: 'Pets',
+    icon: '🐾',
+    emojis: ['🐾','🐶','🐱','🐰','🐹','🐭','🐮','🐷','🐸','🐼','🐨','🐻','🦊','🐺','🦁','🐯'],
+  },
+  {
+    label: 'Wild',
+    icon: '🐘',
+    emojis: ['🐘','🦒','🦓','🦏','🦛','🦘','🐪','🦙','🦬','🐎','🦌','🐿️','🦔','🐇','🐆','🐅','🦝','🦨','🦡'],
+  },
+  {
+    label: 'Birds',
+    icon: '🦉',
+    emojis: ['🦉','🐧','🦅','🦆','🦜','🦢','🦩','🦚','🦃','🐦','🐤','🦤','🪶','🦋'],
+  },
+  {
+    label: 'Ocean',
+    icon: '🐬',
+    emojis: ['🐬','🐙','🦀','🐢','🦈','🐠','🐟','🐡','🐳','🦭','🦑','🦐','🐊','🪼','🐚','🦞'],
+  },
+  {
+    label: 'Bugs',
+    icon: '🐝',
+    emojis: ['🐝','🦋','🐞','🐛','🕷️','🦗','🦂','🪲','🪳','🪰','🐜','🦟'],
+  },
+  {
+    label: 'Fantasy',
+    icon: '🦄',
+    emojis: ['🦄','🐲','🧙','🦸','🧚','🧜','🧝','🧛','👻','🤖','👾','🎃','🧸','🪄','🧿','🔮'],
+  },
+  {
+    label: 'Plants',
+    icon: '🌸',
+    emojis: ['🌸','🌺','🌻','🌹','🌷','🌼','💐','🍀','🌿','🍁','🌵','🌴','🌲','🌳','🎋','🍄','🌱','🌾','🪨','🪸','🪻','🫧'],
+  },
+  {
+    label: 'Sky',
+    icon: '🌟',
+    emojis: ['🌟','⭐','💫','✨','⚡','🔥','❄️','🌈','🌙','☀️','☄️','🌊','🌪️','🌀','⛅','🌤️','🌬️','🌕','🌑','🌠','🌌','⛈️'],
+  },
+  {
+    label: 'Gems',
+    icon: '💎',
+    emojis: ['💎','🔮','💠','🪩','🧊','🔶','🔷','🟣','🟢','🔴','🟡','🟠','⚫','⚪','🟤','🔸','🔹'],
+  },
+  {
+    label: 'Food',
+    icon: '🍕',
+    emojis: ['🍕','🌮','🍦','🧁','🎂','🍩','🍪','🍫','🍬','🍭','🍓','🍇','🍉','🍋','🍌','🍒','🍑','🫐','🥝','🌽','🧇','🥞','🍔','🌭','🥨','🧀','🍣','🍜','🧆','🫕'],
+  },
+  {
+    label: 'Games',
+    icon: '🎮',
+    emojis: ['🎮','🎯','🎲','🃏','🧩','🏆','⚔️','🛡️','🎳','🏅','🥇','🥈','🥉','🎰','♟️','🎱','🪃','🏹','🎣','🪁','🎴','🀄'],
+  },
+  {
+    label: 'Music',
+    icon: '🎸',
+    emojis: ['🎸','🎹','🎺','🎻','🥁','🎵','🎶','🎨','🖌️','🎭','🎤','🎧','🪗','🪘','🪕','🎷','🎙️'],
+  },
+  {
+    label: 'Sports',
+    icon: '⚽',
+    emojis: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🥊','🏄','🛹','🎿','🏂','🛷','🥋','🏊','🚴','🧗','🤸','🏋️','⛷️','🥌','🎽','🏇'],
+  },
+  {
+    label: 'Space',
+    icon: '🚀',
+    emojis: ['🚀','🛸','🌍','🌏','🌎','🪐','🌌','🔭','🛰️','👨‍🚀','☄️','🌕','🌠','🪨','🌑'],
+  },
+  {
+    label: 'Party',
+    icon: '🎉',
+    emojis: ['👑','🎩','🎪','🎠','🎡','🎢','🎁','🎀','🎊','🎉','🎈','🪅','🎆','🎇','🧨','🪆','🃏','🎭','🎪','🪩'],
+  },
+  {
+    label: 'Symbols',
+    icon: '☯️',
+    emojis: ['☯️','☮️','⚜️','🔱','🌐','💡','🔑','🗝️','🧲','🪬','⚡','🔔','🏳️','🚩','❗','❓','💯','✅','⭕','♾️','🔰','🆚'],
+  },
 ]
 
 function AvatarPicker({ selected, onSelect }: { selected: string; onSelect: (a: string) => void }) {
+  const [activeCat, setActiveCat] = useState(0)
+  const emojis = AVATAR_CATEGORIES[activeCat].emojis
+
   return (
-    <div className="grid grid-cols-6 gap-2 max-h-56 overflow-y-auto p-1">
-      {AVATARS.map(a => (
-        <button
-          key={a}
-          type="button"
-          onClick={() => onSelect(a)}
-          className={`text-3xl rounded-xl p-2 transition-colors aspect-square flex items-center justify-center ${
-            selected === a ? 'bg-indigo-100 ring-2 ring-indigo-500' : 'hover:bg-slate-100'
-          }`}
-        >
-          {a}
-        </button>
-      ))}
+    <div className="space-y-2">
+      {/* Category tabs — scrollable row */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {AVATAR_CATEGORIES.map((cat, i) => (
+          <button
+            key={cat.label}
+            type="button"
+            onClick={() => setActiveCat(i)}
+            className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl shrink-0 transition-colors text-xs font-medium ${
+              activeCat === i
+                ? 'bg-indigo-600 text-white'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            <span className="text-lg leading-none">{cat.icon}</span>
+            <span>{cat.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Emoji grid */}
+      <div className="grid grid-cols-6 gap-2 p-1">
+        {emojis.map(a => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => onSelect(a)}
+            className={`text-3xl rounded-xl p-2 transition-colors aspect-square flex items-center justify-center ${
+              selected === a ? 'bg-indigo-100 ring-2 ring-indigo-500' : 'hover:bg-slate-100'
+            }`}
+          >
+            {a}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -85,7 +161,7 @@ export default function PlayersPage() {
 
   // Add form
   const [newName, setNewName] = useState('')
-  const [newAvatar, setNewAvatar] = useState(AVATARS[0])
+  const [newAvatar, setNewAvatar] = useState(AVATAR_CATEGORIES[0].emojis[0])
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -114,7 +190,7 @@ export default function PlayersPage() {
     try {
       await insertPlayer(trimmed, newAvatar)
       setNewName('')
-      setNewAvatar(AVATARS[0])
+      setNewAvatar(AVATAR_CATEGORIES[0].emojis[0])
       setShowAvatarPicker(false)
       await fetchPlayers()
       inputRef.current?.focus()
