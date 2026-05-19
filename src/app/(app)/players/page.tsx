@@ -21,13 +21,13 @@ const AVATARS = [
 
 function AvatarPicker({ selected, onSelect }: { selected: string; onSelect: (a: string) => void }) {
   return (
-    <div className="grid grid-cols-9 gap-1.5 max-h-40 overflow-y-auto p-1">
+    <div className="grid grid-cols-6 gap-2 max-h-56 overflow-y-auto p-1">
       {AVATARS.map(a => (
         <button
           key={a}
           type="button"
           onClick={() => onSelect(a)}
-          className={`text-xl rounded-lg p-1 transition-colors ${
+          className={`text-3xl rounded-xl p-2 transition-colors aspect-square flex items-center justify-center ${
             selected === a ? 'bg-indigo-100 ring-2 ring-indigo-500' : 'hover:bg-slate-100'
           }`}
         >
@@ -39,7 +39,7 @@ function AvatarPicker({ selected, onSelect }: { selected: string; onSelect: (a: 
 }
 
 function PlayerAvatar({ player, size = 'md' }: { player: Pick<Player, 'name' | 'avatar'>; size?: 'sm' | 'md' }) {
-  const sz = size === 'sm' ? 'w-7 h-7 text-base' : 'w-9 h-9 text-xl'
+  const sz = size === 'sm' ? 'w-8 h-8 text-xl' : 'w-11 h-11 text-2xl'
   if (player.avatar) {
     return (
       <div className={`${sz} rounded-full bg-indigo-50 flex items-center justify-center shrink-0`}>
@@ -131,7 +131,7 @@ export default function PlayersPage() {
             type="button"
             onClick={() => setShowAvatarPicker(v => !v)}
             title="Pick an avatar"
-            className={`w-12 h-12 rounded-xl text-2xl flex items-center justify-center shrink-0 transition-colors border-2 ${
+            className={`w-14 h-14 rounded-xl text-3xl flex items-center justify-center shrink-0 transition-colors border-2 ${
               showAvatarPicker ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-slate-50 hover:border-indigo-300'
             }`}
           >
