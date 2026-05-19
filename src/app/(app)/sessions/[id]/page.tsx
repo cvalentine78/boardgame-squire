@@ -8,6 +8,7 @@ type Player = { id: string; name: string; is_winner: boolean }
 type RoundRow = { id: string; scores: Record<string, string> }
 type Session = {
   id: string; status: string; join_code: string; game_id: string; winner_name?: string | null
+  first_player?: string | null
   games: { name: string; rules_pdf_url: string | null; scoring_categories: string[] | null } | null
 }
 
@@ -50,10 +51,10 @@ export default function SessionPage() {
     }, 80)
   }
 
-  function pickFirst(playerList: Player[]) {
+  async function pickFirst(playerList: Player[]) {
     if (playerList.length === 0) return
     const chosen = playerList[Math.floor(Math.random() * playerList.length)].name
-    localStorage.setItem(`tabletopiq_first_${id}`, chosen)
+    await updateSession(id, { first_player: chosen })
     animateTo(playerList, chosen)
   }
 
@@ -95,15 +96,15 @@ export default function SessionPage() {
 
     setLoading(false)
 
-    // Only animate on fresh start (no scores yet). On resume, just show quietly.
+    // First player is stored in the database so all devices see the same result
     if (sessionData?.status === 'active' && pl.length > 0) {
-      const stored = localStorage.getItem(`tabletopiq_first_${id}`)
-      const target = stored ?? pl[Math.floor(Math.random() * pl.length)].name
-      if (!stored) localStorage.setItem(`tabletopiq_first_${id}`, target)
-      const isResume = scoreData && scoreData.length > 0
-      if (isResume) {
-        setFirstPlayer(target)
+      if (sessionData.first_player) {
+        // Already set — show without animation (may have been set by another device)
+        setFirstPlayer(sessionData.first_player)
       } else {
+        // Not set yet — this is the first load, randomize and save to DB
+        const target = pl[Math.floor(Math.random() * pl.length)].name
+        await updateSession(id, { first_player: target })
         setTimeout(() => animateTo(pl, target), 600)
       }
     }
@@ -213,7 +214,7 @@ export default function SessionPage() {
         }))
       )
       const first = players[Math.floor(Math.random() * players.length)].name
-      localStorage.setItem(`tabletopiq_first_${newSession.id}`, first)
+      await updateSession(newSession.id, { first_player: first })
       router.push(`/sessions/${newSession.id}`)
     } catch (err) {
       alert('Error starting rematch: ' + (err instanceof Error ? err.message : String(err)))

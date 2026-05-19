@@ -60,10 +60,12 @@ function NewSessionForm() {
     setError('')
 
     try {
+      const first = selectedNames[Math.floor(Math.random() * selectedNames.length)]
       const session = await insertSession({
         game_id: selectedGame.id,
         join_code: generateCode(),
         status: 'active',
+        first_player: first,
       })
 
       await insertPlayers(
@@ -73,9 +75,6 @@ function NewSessionForm() {
           turn_order: i + 1,
         }))
       )
-
-      const first = selectedNames[Math.floor(Math.random() * selectedNames.length)]
-      localStorage.setItem(`tabletopiq_first_${session.id}`, first)
 
       router.push(`/sessions/${session.id}`)
     } catch (err: unknown) {
