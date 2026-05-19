@@ -224,7 +224,23 @@ export default function SessionPage() {
   async function handleEndGame(resolvedWinner?: string) {
     try {
       await handleSave()
-      await updateSession(id, { status: 'completed', winner_name: resolvedWinner ?? null })
+
+      // Re-fetch scores from DB to get the true totals before declaring a winner
+      // (avoids wrong result if one player's screen had stale data when ending the game)
+      let winner = resolvedWinner
+      if (!winner) {
+        const latestScores = await getScores(id)
+        const dbTotals: Record<string, number> = {}
+        latestScores.forEach((s: { player_name: string; points: number }) => {
+          dbTotals[s.player_name] = (dbTotals[s.player_name] ?? 0) + s.points
+        })
+        const sorted = Object.entries(dbTotals).sort(([, a], [, b]) => b - a)
+        const topScore = sorted[0]?.[1]
+        const tied = sorted.filter(([, v]) => v === topScore)
+        if (tied.length === 1) winner = tied[0][0]
+      }
+
+      await updateSession(id, { status: 'completed', winner_name: winner ?? null })
       fetchData()
     } catch (err) {
       alert('Error ending game: ' + (err instanceof Error ? err.message : String(err)))
