@@ -100,7 +100,10 @@ function AvatarPicker({ selected, onSelect }: { selected: string; onSelect: (a: 
   return (
     <div className="space-y-2">
       {/* Category tabs — scrollable row */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div
+        className="flex gap-1.5 pb-1"
+        style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
+      >
         {AVATAR_CATEGORIES.map((cat, i) => (
           <button
             key={cat.label}
