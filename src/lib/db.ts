@@ -9,10 +9,32 @@ function db() {
 export async function getGames() {
   const { data, error } = await db()
     .from('games')
-    .select('id,name,min_players,max_players,scoring_categories,is_shared')
+    .select('id,name,min_players,max_players,scoring_categories,is_shared,created_by')
     .order('name')
   if (error) throw new Error(error.message)
   return data ?? []
+}
+
+export async function copyGame(gameId: string) {
+  const client = db()
+  const { data: { session } } = await client.auth.getSession()
+  const userId = session?.user?.id ?? null
+  if (!userId) throw new Error('Not signed in')
+
+  const { data: original, error: fetchErr } = await client
+    .from('games')
+    .select('name,description,min_players,max_players,rules_pdf_url,scoring_categories')
+    .eq('id', gameId)
+    .single()
+  if (fetchErr || !original) throw new Error('Game not found')
+
+  const { data, error } = await client
+    .from('games')
+    .insert({ ...original, created_by: userId, is_shared: false })
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function getGame(id: string) {

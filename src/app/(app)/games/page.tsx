@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getGames, deleteGame, toggleGameShared } from '@/lib/db'
+import { createClient } from '@/lib/supabase/client'
+import { getGames, deleteGame, toggleGameShared, copyGame } from '@/lib/db'
 
 type Game = {
   id: string
@@ -12,6 +13,7 @@ type Game = {
   max_players: number | null
   scoring_categories: string[] | null
   is_shared: boolean | null
+  created_by: string | null
 }
 
 export default function GamesPage() {
@@ -20,6 +22,9 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [copyingId, setCopyingId] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [myUserId, setMyUserId] = useState<string | null>(null)
 
   async function fetchGames() {
     const data = await getGames()
@@ -27,12 +32,28 @@ export default function GamesPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchGames() }, [])
+  useEffect(() => {
+    fetchGames()
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      setMyUserId(session?.user?.id ?? null)
+    })
+  }, [])
 
   async function handleDelete(id: string) {
     await deleteGame(id)
     setConfirmId(null)
     fetchGames()
+  }
+
+  async function handleCopy(game: Game) {
+    setCopyingId(game.id)
+    try {
+      await copyGame(game.id)
+      setCopiedId(game.id)
+      setTimeout(() => setCopiedId(null), 2500)
+      fetchGames()
+    } catch { /* ignore */ }
+    setCopyingId(null)
   }
 
   async function handleToggleShare(game: Game) {
@@ -74,64 +95,89 @@ export default function GamesPage() {
       ) : (
         <>
           <p className="text-xs text-slate-500">
-            Tap the 🔒 / 🌐 icon to toggle whether a game is shared with your party.
+            Tap 🔒 / 🌐 to toggle sharing. Games from your party show a Copy button.
           </p>
           <div className="space-y-2">
-            {games.map(game => (
-              <div key={game.id}>
-                {confirmId === game.id ? (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-3">
-                    <p className="flex-1 text-sm text-red-700">Delete <span className="font-semibold">{game.name}</span>?</p>
-                    <button onClick={() => setConfirmId(null)}
-                      className="text-sm px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 font-medium text-slate-700">
-                      Cancel
-                    </button>
-                    <button onClick={() => handleDelete(game.id)}
-                      className="text-sm px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium">
-                      Delete
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <Link href={`/games/${game.id}`}
-                      className="flex-1 flex items-center justify-between p-4 hover:bg-slate-50 rounded-l-xl transition-colors">
-                      <div>
-                        <div className="font-semibold text-slate-800">{game.name}</div>
-                        <div className="text-sm text-slate-500 mt-0.5">
-                          {game.min_players && game.max_players ? `${game.min_players}–${game.max_players} players` : ''}
-                          {game.scoring_categories && game.scoring_categories.length > 0
-                            ? `${game.min_players ? ' · ' : ''}${game.scoring_categories.length} scoring categories`
-                            : ''}
-                        </div>
-                      </div>
-                    </Link>
-                    <div className="flex items-center gap-1 pr-2 shrink-0">
-                      {/* Share toggle */}
-                      <button
-                        onClick={() => handleToggleShare(game)}
-                        disabled={togglingId === game.id}
-                        title={game.is_shared ? 'Shared with party — tap to make private' : 'Private — tap to share with party'}
-                        className={`p-2 rounded-lg transition-colors text-base ${
-                          game.is_shared
-                            ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
-                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        {game.is_shared ? '🌐' : '🔒'}
+            {games.map(game => {
+              const isMine = !game.created_by || game.created_by === myUserId
+              return (
+                <div key={game.id}>
+                  {confirmId === game.id ? (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-3">
+                      <p className="flex-1 text-sm text-red-700">Delete <span className="font-semibold">{game.name}</span>?</p>
+                      <button onClick={() => setConfirmId(null)}
+                        className="text-sm px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 font-medium text-slate-700">
+                        Cancel
                       </button>
-                      <button onClick={() => router.push(`/games/${game.id}/edit`)}
-                        className="p-2.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
-                        ✏️
-                      </button>
-                      <button onClick={() => setConfirmId(game.id)}
-                        className="p-2.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100">
-                        🗑
+                      <button onClick={() => handleDelete(game.id)}
+                        className="text-sm px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium">
+                        Delete
                       </button>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <div className={`flex items-center gap-1 bg-white rounded-xl border shadow-sm ${isMine ? 'border-slate-200' : 'border-indigo-200'}`}>
+                      <Link href={`/games/${game.id}`}
+                        className="flex-1 flex items-center justify-between p-4 hover:bg-slate-50 rounded-l-xl transition-colors">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold text-slate-800">{game.name}</div>
+                            {!isMine && (
+                              <span className="text-xs text-indigo-500 font-medium bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full">Party</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-slate-500 mt-0.5">
+                            {game.min_players && game.max_players ? `${game.min_players}–${game.max_players} players` : ''}
+                            {game.scoring_categories && game.scoring_categories.length > 0
+                              ? `${game.min_players ? ' · ' : ''}${game.scoring_categories.length} scoring categories`
+                              : ''}
+                          </div>
+                        </div>
+                      </Link>
+                      <div className="flex items-center gap-1 pr-2 shrink-0">
+                        {!isMine ? (
+                          /* Party game — show Copy button instead of edit/delete/share */
+                          <button
+                            onClick={() => handleCopy(game)}
+                            disabled={copyingId === game.id}
+                            title="Copy to your library"
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                              copiedId === game.id
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                            }`}
+                          >
+                            {copiedId === game.id ? '✓ Copied!' : copyingId === game.id ? '...' : '📋 Copy'}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleToggleShare(game)}
+                              disabled={togglingId === game.id}
+                              title={game.is_shared ? 'Shared with party — tap to make private' : 'Private — tap to share with party'}
+                              className={`p-2 rounded-lg transition-colors text-base ${
+                                game.is_shared
+                                  ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              {game.is_shared ? '🌐' : '🔒'}
+                            </button>
+                            <button onClick={() => router.push(`/games/${game.id}/edit`)}
+                              className="p-2.5 text-slate-400 hover:text-indigo-600 transition-colors rounded-lg hover:bg-slate-100">
+                              ✏️
+                            </button>
+                            <button onClick={() => setConfirmId(game.id)}
+                              className="p-2.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-100">
+                              🗑
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </>
       )}
