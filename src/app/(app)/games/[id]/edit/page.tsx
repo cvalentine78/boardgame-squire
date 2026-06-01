@@ -231,7 +231,7 @@ export default function EditGamePage() {
                 <p className="text-xs text-slate-400 mt-0.5">Pull in fresh details or a new score sheet suggestion</p>
               </div>
               <a href="https://boardgamegeek.com" target="_blank" rel="noopener noreferrer" className="shrink-0">
-                <img src="https://cf.geekdo-images.com/powered-by-bgg/powered-by-bgg_sm.png" alt="Powered by BGG" className="h-6" />
+                <span className="text-xs font-bold px-2 py-1 rounded bg-orange-600 text-white tracking-wide">BGG</span>
               </a>
             </div>
             <div className="relative">
