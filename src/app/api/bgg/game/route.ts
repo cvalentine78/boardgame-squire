@@ -57,7 +57,8 @@ export async function GET(request: NextRequest) {
       mechanics,
       rating: rating && rating > 0 ? Math.round(rating * 10) / 10 : null,
       weight: weight && weight > 0 ? Math.round(weight * 10) / 10 : null,
-    })
+    // Game data rarely changes — cache for 24 hours at CDN, 1 hour at browser
+    }, { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=3600' } })
   } catch (err) {
     console.error('BGG game error:', err)
     return NextResponse.json(null, { status: 502 })

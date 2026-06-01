@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { getGames, deleteGame, toggleGameShared, copyGame } from '@/lib/db'
 
@@ -129,7 +130,8 @@ export default function GamesPage() {
                       <Link href={`/games/${game.id}`}
                         className="flex-1 flex items-center gap-3 p-3 hover:bg-slate-50 rounded-l-xl transition-colors min-w-0">
                         {game.thumbnail_url ? (
-                          <img src={game.thumbnail_url} alt="" className="w-12 h-12 object-contain rounded-lg shrink-0 bg-slate-50" />
+                          <Image src={game.thumbnail_url} alt="" width={48} height={48}
+                            className="w-12 h-12 object-contain rounded-lg shrink-0 bg-slate-50" />
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-2xl">🎲</div>
                         )}

@@ -1,176 +1,14 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react'
 import { getPlayers, insertPlayer, deletePlayer, updatePlayerAvatar } from '@/lib/db'
+import { DEFAULT_AVATAR } from '@/lib/avatar-categories'
+
+// Dynamically imported — the 378-emoji picker is only fetched when first opened,
+// not included in the initial page bundle at all.
+const AvatarPicker = lazy(() => import('@/components/AvatarPicker'))
 
 type Player = { id: string; name: string; avatar: string | null }
-
-const AVATAR_CATEGORIES: { label: string; icon: string; emojis: string[] }[] = [
-  {
-    label: 'Hearts',
-    icon: '❤️',
-    emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💕','💖','💝','💘','💟','❣️','💗','💓','💞','💌','🩷','🩵','🩶'],
-  },
-  {
-    label: 'Pets',
-    icon: '🐾',
-    emojis: ['🐾','🐶','🐱','🐰','🐹','🐭','🐮','🐷','🐸','🐼','🐨','🐻','🦊','🐺','🦁','🐯'],
-  },
-  {
-    label: 'Wild',
-    icon: '🐘',
-    emojis: ['🐘','🦒','🦓','🦏','🦛','🦘','🐪','🦙','🦬','🐎','🦌','🐿️','🦔','🐇','🐆','🐅','🦝','🦨','🦡'],
-  },
-  {
-    label: 'Birds',
-    icon: '🦉',
-    emojis: ['🦉','🐧','🦅','🦆','🦜','🦢','🦩','🦚','🦃','🐦','🐤','🦤','🪶','🦋'],
-  },
-  {
-    label: 'Ocean',
-    icon: '🐬',
-    emojis: ['🐬','🐙','🦀','🐢','🦈','🐠','🐟','🐡','🐳','🦭','🦑','🦐','🐊','🪼','🐚','🦞'],
-  },
-  {
-    label: 'Bugs',
-    icon: '🐝',
-    emojis: ['🐝','🦋','🐞','🐛','🕷️','🦗','🦂','🪲','🪳','🪰','🐜','🦟'],
-  },
-  {
-    label: 'Fantasy',
-    icon: '🦄',
-    emojis: ['🦄','🐲','🧙','🦸','🧚','🧜','🧝','🧛','👻','🤖','👾','🎃','🧸','🪄','🧿','🔮'],
-  },
-  {
-    label: 'Plants',
-    icon: '🌸',
-    emojis: ['🌸','🌺','🌻','🌹','🌷','🌼','💐','🍀','🌿','🍁','🌵','🌴','🌲','🌳','🎋','🍄','🌱','🌾','🪨','🪸','🪻','🫧'],
-  },
-  {
-    label: 'Sky',
-    icon: '🌟',
-    emojis: ['🌟','⭐','💫','✨','⚡','🔥','❄️','🌈','🌙','☀️','☄️','🌊','🌪️','🌀','⛅','🌤️','🌬️','🌕','🌑','🌠','🌌','⛈️'],
-  },
-  {
-    label: 'Gems',
-    icon: '💎',
-    emojis: ['💎','🔮','💠','🪩','🧊','🔶','🔷','🟣','🟢','🔴','🟡','🟠','⚫','⚪','🟤','🔸','🔹'],
-  },
-  {
-    label: 'Food',
-    icon: '🍕',
-    emojis: ['🍕','🌮','🍦','🧁','🎂','🍩','🍪','🍫','🍬','🍭','🍓','🍇','🍉','🍋','🍌','🍒','🍑','🫐','🥝','🌽','🧇','🥞','🍔','🌭','🥨','🧀','🍣','🍜','🧆','🫕'],
-  },
-  {
-    label: 'Games',
-    icon: '🎮',
-    emojis: ['🎮','🎯','🎲','🃏','🧩','🏆','⚔️','🛡️','🎳','🏅','🥇','🥈','🥉','🎰','♟️','🎱','🪃','🏹','🎣','🪁','🎴','🀄'],
-  },
-  {
-    label: 'Music',
-    icon: '🎸',
-    emojis: ['🎸','🎹','🎺','🎻','🥁','🎵','🎶','🎨','🖌️','🎭','🎤','🎧','🪗','🪘','🪕','🎷','🎙️'],
-  },
-  {
-    label: 'Sports',
-    icon: '⚽',
-    emojis: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🥊','🏄','🛹','🎿','🏂','🛷','🥋','🏊','🚴','🧗','🤸','🏋️','⛷️','🥌','🎽','🏇'],
-  },
-  {
-    label: 'Space',
-    icon: '🚀',
-    emojis: ['🚀','🛸','🌍','🌏','🌎','🪐','🌌','🔭','🛰️','👨‍🚀','☄️','🌕','🌠','🪨','🌑'],
-  },
-  {
-    label: 'Party',
-    icon: '🎉',
-    emojis: ['👑','🎩','🎪','🎠','🎡','🎢','🎁','🎀','🎊','🎉','🎈','🪅','🎆','🎇','🧨','🪆','🃏','🎭','🎪','🪩'],
-  },
-  {
-    label: 'Symbols',
-    icon: '☯️',
-    emojis: ['☯️','☮️','⚜️','🔱','🌐','💡','🔑','🗝️','🧲','🪬','⚡','🔔','🏳️','🚩','❗','❓','💯','✅','⭕','♾️','🔰','🆚'],
-  },
-]
-
-function AvatarPicker({ selected, onSelect }: { selected: string; onSelect: (a: string) => void }) {
-  const [activeCat, setActiveCat] = useState(0)
-  const tabsRef = useRef<HTMLDivElement>(null)
-  const emojis = AVATAR_CATEGORIES[activeCat].emojis
-
-  const scroll = useCallback((dir: -1 | 1) => {
-    tabsRef.current?.scrollBy({ left: dir * 120, behavior: 'smooth' })
-  }, [])
-
-  function handleWheel(e: React.WheelEvent) {
-    if (tabsRef.current) {
-      e.preventDefault()
-      tabsRef.current.scrollLeft += e.deltaY + e.deltaX
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      {/* Category tabs — scrollable row with arrow buttons */}
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => scroll(-1)}
-          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 transition-colors text-sm"
-        >
-          ‹
-        </button>
-
-        <div
-          ref={tabsRef}
-          onWheel={handleWheel}
-          className="flex gap-1.5 flex-1 pb-1"
-          style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-        >
-          {AVATAR_CATEGORIES.map((cat, i) => (
-            <button
-              key={cat.label}
-              type="button"
-              onClick={() => setActiveCat(i)}
-              className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl shrink-0 transition-colors text-xs font-medium ${
-                activeCat === i
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-              }`}
-            >
-              <span className="text-lg leading-none">{cat.icon}</span>
-              <span>{cat.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => scroll(1)}
-          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 transition-colors text-sm"
-        >
-          ›
-        </button>
-      </div>
-
-      {/* Emoji grid */}
-      <div className="grid grid-cols-6 gap-2 p-1">
-        {emojis.map(a => (
-          <button
-            key={a}
-            type="button"
-            onClick={() => onSelect(a)}
-            className={`text-3xl rounded-xl p-2 transition-colors aspect-square flex items-center justify-center ${
-              selected === a ? 'bg-indigo-100 ring-2 ring-indigo-500' : 'hover:bg-slate-100'
-            }`}
-          >
-            {a}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function PlayerAvatar({ player, size = 'md' }: { player: Pick<Player, 'name' | 'avatar'>; size?: 'sm' | 'md' }) {
   const sz = size === 'sm' ? 'w-8 h-8 text-xl' : 'w-11 h-11 text-2xl'
@@ -196,7 +34,7 @@ export default function PlayersPage() {
 
   // Add form
   const [newName, setNewName] = useState('')
-  const [newAvatar, setNewAvatar] = useState(AVATAR_CATEGORIES[0].emojis[0])
+  const [newAvatar, setNewAvatar] = useState(DEFAULT_AVATAR)
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -225,7 +63,7 @@ export default function PlayersPage() {
     try {
       await insertPlayer(trimmed, newAvatar)
       setNewName('')
-      setNewAvatar(AVATAR_CATEGORIES[0].emojis[0])
+      setNewAvatar(DEFAULT_AVATAR)
       setShowAvatarPicker(false)
       await fetchPlayers()
       inputRef.current?.focus()
@@ -293,7 +131,9 @@ export default function PlayersPage() {
         {showAvatarPicker && (
           <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
             <p className="text-xs text-slate-400 mb-2 font-medium">Choose an avatar</p>
-            <AvatarPicker selected={newAvatar} onSelect={a => { setNewAvatar(a); setShowAvatarPicker(false) }} />
+            <Suspense fallback={<div className="h-40 flex items-center justify-center text-slate-400 text-sm">Loading…</div>}>
+              <AvatarPicker selected={newAvatar} onSelect={a => { setNewAvatar(a); setShowAvatarPicker(false) }} />
+            </Suspense>
           </div>
         )}
 
@@ -348,10 +188,12 @@ export default function PlayersPage() {
                   {editingAvatarId === player.id && (
                     <div className="border-t border-slate-100 px-4 py-3 bg-slate-50">
                       <p className="text-xs text-slate-400 mb-2 font-medium">Choose an avatar</p>
-                      <AvatarPicker
-                        selected={player.avatar ?? ''}
-                        onSelect={a => handleAvatarChange(player.id, a)}
-                      />
+                      <Suspense fallback={<div className="h-40 flex items-center justify-center text-slate-400 text-sm">Loading…</div>}>
+                        <AvatarPicker
+                          selected={player.avatar ?? ''}
+                          onSelect={a => handleAvatarChange(player.id, a)}
+                        />
+                      </Suspense>
                     </div>
                   )}
                 </div>

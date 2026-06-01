@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import Image from 'next/image'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getGame, updateGame } from '@/lib/db'
@@ -238,7 +239,7 @@ export default function EditGamePage() {
             {bggLoadingGame && <p className="text-sm text-indigo-500 text-center py-1">Loading game details…</p>}
             {bggApplied && !bggLoadingGame && (
               <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-xl p-3">
-                {bggThumbnail && <img src={bggThumbnail} alt="" className="w-12 h-12 object-contain rounded-lg shrink-0" />}
+                {bggThumbnail && <Image src={bggThumbnail} alt="" width={48} height={48} className="w-12 h-12 object-contain rounded-lg shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700 font-medium">Details updated from BGG ✓</p>
                   {bggId && (

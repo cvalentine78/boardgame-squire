@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { getGame, deleteGame, toggleGameShared, copyGame } from '@/lib/db'
 
@@ -96,7 +97,8 @@ export default function GameDetailPage() {
       {/* Thumbnail */}
       {game.thumbnail_url && (
         <div className="flex justify-center">
-          <img src={game.thumbnail_url} alt={game.name}
+          <Image src={game.thumbnail_url} alt={game.name} width={128} height={128}
+            priority
             className="w-32 h-32 object-contain rounded-2xl bg-white shadow-lg p-2" />
         </div>
       )}

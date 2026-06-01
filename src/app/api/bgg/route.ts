@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'BGG session expired — please reconnect', results: [] }, { status: 401 })
     }
 
-    return parseSearch(await res.text())
+    const result = parseSearch(await res.text())
+    // Cache search results for 10 minutes — BGG search index rarely changes
+    result.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=300')
+    return result
   } catch (err) {
     console.error('BGG search error:', err)
     return NextResponse.json({ error: 'Could not reach BoardGameGeek', results: [] }, { status: 502 })
