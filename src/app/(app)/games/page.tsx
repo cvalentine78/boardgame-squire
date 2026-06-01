@@ -104,6 +104,8 @@ export default function GamesPage() {
                 g.name.toLowerCase() === game.name.toLowerCase() &&
                 (!g.created_by || g.created_by === myUserId)
               )
+              // Hide party games you've already copied — your own copy is shown instead
+              if (alreadyCopied) return null
               return (
                 <div key={game.id}>
                   {confirmId === game.id ? (
