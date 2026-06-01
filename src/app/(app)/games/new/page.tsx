@@ -21,6 +21,8 @@ export default function NewGamePage() {
   const [bggLoadingGame, setBggLoadingGame] = useState(false)
   const [bggThumbnail, setBggThumbnail] = useState<string | null>(null)
   const [bggId, setBggId] = useState<string | null>(null)
+  const [bggRating, setBggRating] = useState<number | null>(null)
+  const [bggWeight, setBggWeight] = useState<number | null>(null)
   const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Step 1 — game info
@@ -71,6 +73,8 @@ export default function NewGamePage() {
         setMinPlayers(data.minPlayers || '')
         setMaxPlayers(data.maxPlayers || '')
         setBggThumbnail(data.thumbnail || null)
+        setBggRating(data.rating ?? null)
+        setBggWeight(data.weight ?? null)
         // Auto-suggest score categories from BGG mechanics
         if (data.mechanics?.length) {
           const suggested = suggestCategories(data.mechanics)
@@ -137,6 +141,8 @@ export default function NewGamePage() {
         scoring_categories: categories,
         thumbnail_url: bggThumbnail || null,
         bgg_id: bggId || null,
+        bgg_rating: bggRating,
+        bgg_weight: bggWeight,
       })
       router.push('/games')
     } catch (err: unknown) {

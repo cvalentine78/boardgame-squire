@@ -53,6 +53,8 @@ export default function EditGamePage() {
   const [bggThumbnail, setBggThumbnail] = useState<string | null>(null)
   const [bggApplied, setBggApplied] = useState(false)
   const [bggId, setBggId] = useState<string | null>(null)
+  const [bggRating, setBggRating] = useState<number | null>(null)
+  const [bggWeight, setBggWeight] = useState<number | null>(null)
   const [suggestedCats, setSuggestedCats] = useState<string[]>([])
   const [previousCats, setPreviousCats] = useState<string[] | null>(null)
   const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -101,6 +103,8 @@ export default function EditGamePage() {
         setMinPlayers(data.minPlayers || '')
         setMaxPlayers(data.maxPlayers || '')
         setBggThumbnail(data.thumbnail || null)
+        setBggRating(data.rating ?? null)
+        setBggWeight(data.weight ?? null)
         setBggApplied(true)
         // Suggest categories from mechanics (don't auto-replace existing ones)
         if (data.mechanics?.length) {
@@ -188,6 +192,8 @@ export default function EditGamePage() {
         scoring_categories: categories,
         ...(bggThumbnail ? { thumbnail_url: bggThumbnail } : {}),
         ...(bggId ? { bgg_id: bggId } : {}),
+        ...(bggRating !== null ? { bgg_rating: bggRating } : {}),
+        ...(bggWeight !== null ? { bgg_weight: bggWeight } : {}),
       })
       router.push('/games')
     } catch (err: unknown) {

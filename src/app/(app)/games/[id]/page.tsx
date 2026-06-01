@@ -17,6 +17,8 @@ type Game = {
   created_by: string | null
   thumbnail_url: string | null
   bgg_id: string | null
+  bgg_rating: number | null
+  bgg_weight: number | null
 }
 
 export default function GameDetailPage() {
@@ -74,6 +76,16 @@ export default function GameDetailPage() {
 
   const isMine = !game.created_by || game.created_by === myUserId
 
+  function weightLabel(w: number) {
+    if (w < 1.5) return 'Very Easy'
+    if (w < 2.0) return 'Easy'
+    if (w < 2.5) return 'Medium-Light'
+    if (w < 3.0) return 'Medium'
+    if (w < 3.5) return 'Medium-Heavy'
+    if (w < 4.0) return 'Heavy'
+    return 'Very Heavy'
+  }
+
   return (
     <div className="space-y-4 pb-6">
       <div className="flex items-center gap-3">
@@ -107,6 +119,18 @@ export default function GameDetailPage() {
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Score sheet</span>
             <span className="text-slate-400">Round-by-round grid</span>
+          </div>
+        )}
+        {game.bgg_rating && (
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">BGG Rating</span>
+            <span className="text-slate-800 font-medium">⭐ {game.bgg_rating} / 10</span>
+          </div>
+        )}
+        {game.bgg_weight && (
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Complexity</span>
+            <span className="text-slate-800 font-medium">{weightLabel(game.bgg_weight)} ({game.bgg_weight} / 5)</span>
           </div>
         )}
         {game.description && (

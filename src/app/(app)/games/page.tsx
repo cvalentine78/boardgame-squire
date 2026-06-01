@@ -16,6 +16,8 @@ type Game = {
   created_by: string | null
   thumbnail_url: string | null
   bgg_id: string | null
+  bgg_rating: number | null
+  bgg_weight: number | null
 }
 
 export default function GamesPage() {
@@ -144,6 +146,12 @@ export default function GamesPage() {
                               ? `${game.min_players ? ' · ' : ''}${game.scoring_categories.length} scoring categories`
                               : ''}
                           </div>
+                          {(game.bgg_rating || game.bgg_weight) && (
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {game.bgg_rating && <span className="text-xs text-amber-600 font-medium">⭐ {game.bgg_rating}</span>}
+                              {game.bgg_weight && <span className="text-xs text-slate-400">· Complexity {game.bgg_weight}/5</span>}
+                            </div>
+                          )}
                         </div>
                       </Link>
                       <div className="flex items-center gap-1 pr-2 shrink-0">

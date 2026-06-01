@@ -39,9 +39,14 @@ export async function GET(request: NextRequest) {
     const minMatch = xml.match(/<minplayers[^>]*value="(\d+)"/)
     const maxMatch = xml.match(/<maxplayers[^>]*value="(\d+)"/)
     const thumbMatch = xml.match(/<thumbnail>([\s\S]*?)<\/thumbnail>/)
+    const ratingMatch = xml.match(/<average[^>]*value="([^"]+)"/)
+    const weightMatch = xml.match(/<averageweight[^>]*value="([^"]+)"/)
 
     const mechanics = [...xml.matchAll(/<link type="boardgamemechanic"[^>]*value="([^"]+)"/g)]
       .map(m => decode(m[1]))
+
+    const rating = ratingMatch ? parseFloat(ratingMatch[1]) : null
+    const weight = weightMatch ? parseFloat(weightMatch[1]) : null
 
     return NextResponse.json({
       name: nameMatch ? decode(nameMatch[1]) : '',
@@ -50,6 +55,8 @@ export async function GET(request: NextRequest) {
       maxPlayers: maxMatch ? maxMatch[1] : '',
       thumbnail: thumbMatch ? thumbMatch[1].trim() : null,
       mechanics,
+      rating: rating && rating > 0 ? Math.round(rating * 10) / 10 : null,
+      weight: weight && weight > 0 ? Math.round(weight * 10) / 10 : null,
     })
   } catch (err) {
     console.error('BGG game error:', err)
