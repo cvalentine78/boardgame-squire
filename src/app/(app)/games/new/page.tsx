@@ -155,9 +155,14 @@ export default function NewGamePage() {
 
           {/* BGG Search */}
           <div className="bg-white rounded-2xl p-4 space-y-3">
-            <div>
-              <h2 className="font-semibold text-sm text-slate-700 uppercase tracking-wide">Search BoardGameGeek</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Find your game to auto-fill the details</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-sm text-slate-700 uppercase tracking-wide">Search BoardGameGeek</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Find your game to auto-fill the details</p>
+              </div>
+              <a href="https://boardgamegeek.com" target="_blank" rel="noopener noreferrer" className="shrink-0">
+                <img src="https://cf.geekdo-images.com/powered-by-bgg/powered-by-bgg_sm.png" alt="Powered by BGG" className="h-6" />
+              </a>
             </div>
             <div className="relative">
               <input type="text" value={bggQuery} onChange={e => onBggInput(e.target.value)}
