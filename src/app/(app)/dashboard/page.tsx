@@ -67,6 +67,11 @@ export default function DashboardPage() {
           <div className="text-2xl mb-1">🎉</div>
           <div className="font-semibold text-sm text-slate-700">Party — Share with Friends</div>
         </Link>
+        <Link href="/whats-new"
+          className="bg-slate-800 hover:bg-slate-700 rounded-xl p-4 text-center transition-colors border border-slate-700 col-span-2">
+          <div className="text-2xl mb-1">📣</div>
+          <div className="font-semibold text-sm text-slate-300">What&apos;s New</div>
+        </Link>
       </div>
 
       {/* In-progress matches */}
