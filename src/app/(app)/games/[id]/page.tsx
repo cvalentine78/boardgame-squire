@@ -15,6 +15,8 @@ type Game = {
   scoring_categories: string[] | null
   is_shared: boolean | null
   created_by: string | null
+  thumbnail_url: string | null
+  bgg_id: string | null
 }
 
 export default function GameDetailPage() {
@@ -78,6 +80,14 @@ export default function GameDetailPage() {
         <button onClick={() => router.back()} className="text-slate-400 hover:text-white">←</button>
         <h1 className="text-2xl font-bold text-white">{game.name}</h1>
       </div>
+
+      {/* Thumbnail */}
+      {game.thumbnail_url && (
+        <div className="flex justify-center">
+          <img src={game.thumbnail_url} alt={game.name}
+            className="w-32 h-32 object-contain rounded-2xl bg-white shadow-lg p-2" />
+        </div>
+      )}
 
       {/* Game info */}
       <div className="bg-white rounded-2xl p-4 space-y-2 shadow-lg">
@@ -157,6 +167,12 @@ export default function GameDetailPage() {
           <a href={game.rules_pdf_url} target="_blank" rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 font-medium transition-colors">
             📄 View Rules PDF
+          </a>
+        )}
+        {game.bgg_id && (
+          <a href={`https://boardgamegeek.com/boardgame/${game.bgg_id}`} target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl py-3 font-medium transition-colors">
+            🎲 View on BoardGameGeek
           </a>
         )}
         <button onClick={() => router.push(`/sessions/new?game=${id}`)}

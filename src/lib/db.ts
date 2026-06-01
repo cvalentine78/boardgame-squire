@@ -9,7 +9,7 @@ function db() {
 export async function getGames() {
   const { data, error } = await db()
     .from('games')
-    .select('id,name,min_players,max_players,scoring_categories,is_shared,created_by')
+    .select('id,name,min_players,max_players,scoring_categories,is_shared,created_by,thumbnail_url,bgg_id')
     .order('name')
   if (error) throw new Error(error.message)
   return data ?? []

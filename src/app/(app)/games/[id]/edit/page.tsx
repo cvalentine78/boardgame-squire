@@ -52,6 +52,7 @@ export default function EditGamePage() {
   const [bggLoadingGame, setBggLoadingGame] = useState(false)
   const [bggThumbnail, setBggThumbnail] = useState<string | null>(null)
   const [bggApplied, setBggApplied] = useState(false)
+  const [bggId, setBggId] = useState<string | null>(null)
   const [suggestedCats, setSuggestedCats] = useState<string[]>([])
   const [previousCats, setPreviousCats] = useState<string[] | null>(null)
   const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -86,12 +87,13 @@ export default function EditGamePage() {
     }, 500)
   }
 
-  async function selectBggGame(bggId: string, gameName: string) {
+  async function selectBggGame(selectedBggId: string, gameName: string) {
     setBggResults([])
     setBggQuery('')
     setBggLoadingGame(true)
+    setBggId(selectedBggId)
     try {
-      const res = await fetch(`/api/bgg/game?id=${bggId}`)
+      const res = await fetch(`/api/bgg/game?id=${selectedBggId}`)
       const data = await res.json()
       if (data) {
         setName(data.name || gameName)
@@ -184,6 +186,8 @@ export default function EditGamePage() {
         max_players: maxPlayers ? parseInt(maxPlayers) : null,
         rules_pdf_url: pdfUrl,
         scoring_categories: categories,
+        ...(bggThumbnail ? { thumbnail_url: bggThumbnail } : {}),
+        ...(bggId ? { bgg_id: bggId } : {}),
       })
       router.push('/games')
     } catch (err: unknown) {
@@ -254,9 +258,13 @@ export default function EditGamePage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700 font-medium">Details updated from BGG ✓</p>
                   {suggestedCats.length > 0 && (
-                    <p className="text-xs text-indigo-500 mt-0.5">
-                      Score sheet suggestions ready — choose on next step
-                    </p>
+                    <p className="text-xs text-indigo-500 mt-0.5">Score sheet suggestions ready — choose on next step</p>
+                  )}
+                  {bggId && (
+                    <a href={`https://boardgamegeek.com/boardgame/${bggId}`} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-indigo-500 hover:text-indigo-700 underline mt-0.5 inline-block">
+                      View on BGG (rules &amp; files) ↗
+                    </a>
                   )}
                 </div>
               </div>

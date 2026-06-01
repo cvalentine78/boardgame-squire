@@ -20,6 +20,7 @@ export default function NewGamePage() {
   const [bggSearching, setBggSearching] = useState(false)
   const [bggLoadingGame, setBggLoadingGame] = useState(false)
   const [bggThumbnail, setBggThumbnail] = useState<string | null>(null)
+  const [bggId, setBggId] = useState<string | null>(null)
   const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Step 1 — game info
@@ -60,6 +61,7 @@ export default function NewGamePage() {
     setBggResults([])
     setBggQuery('')
     setBggLoadingGame(true)
+    setBggId(id)
     try {
       const res = await fetch(`/api/bgg/game?id=${id}`)
       const data = await res.json()
@@ -133,6 +135,8 @@ export default function NewGamePage() {
         max_players: maxPlayers ? parseInt(maxPlayers) : null,
         rules_pdf_url: pdfUrl,
         scoring_categories: categories,
+        thumbnail_url: bggThumbnail || null,
+        bgg_id: bggId || null,
       })
       router.push('/games')
     } catch (err: unknown) {
@@ -195,7 +199,15 @@ export default function NewGamePage() {
             {bggThumbnail && !bggLoadingGame && (
               <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-xl p-3">
                 <img src={bggThumbnail} alt="" className="w-14 h-14 object-contain rounded-lg shrink-0" />
-                <p className="text-sm text-slate-600">Details loaded — review and edit below.</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600">Details loaded — review and edit below.</p>
+                  {bggId && (
+                    <a href={`https://boardgamegeek.com/boardgame/${bggId}`} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-indigo-500 hover:text-indigo-700 underline mt-0.5 inline-block">
+                      View on BGG (rules &amp; files) ↗
+                    </a>
+                  )}
+                </div>
               </div>
             )}
           </div>

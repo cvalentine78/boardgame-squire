@@ -14,6 +14,8 @@ type Game = {
   scoring_categories: string[] | null
   is_shared: boolean | null
   created_by: string | null
+  thumbnail_url: string | null
+  bgg_id: string | null
 }
 
 export default function GamesPage() {
@@ -123,12 +125,17 @@ export default function GamesPage() {
                   ) : (
                     <div className={`flex items-center gap-1 bg-white rounded-xl border shadow-sm ${isMine ? 'border-slate-200' : 'border-indigo-200'}`}>
                       <Link href={`/games/${game.id}`}
-                        className="flex-1 flex items-center justify-between p-4 hover:bg-slate-50 rounded-l-xl transition-colors">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold text-slate-800">{game.name}</div>
+                        className="flex-1 flex items-center gap-3 p-3 hover:bg-slate-50 rounded-l-xl transition-colors min-w-0">
+                        {game.thumbnail_url ? (
+                          <img src={game.thumbnail_url} alt="" className="w-12 h-12 object-contain rounded-lg shrink-0 bg-slate-50" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 text-2xl">🎲</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="font-semibold text-slate-800 truncate">{game.name}</div>
                             {!isMine && (
-                              <span className="text-xs text-indigo-500 font-medium bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full">Party</span>
+                              <span className="text-xs text-indigo-500 font-medium bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full shrink-0">Party</span>
                             )}
                           </div>
                           <div className="text-sm text-slate-500 mt-0.5">
