@@ -268,11 +268,19 @@ export default function NewGamePage() {
             )}
           </div>
 
-          <button
-            onClick={() => { if (!name.trim()) { setError('Please enter a game name.'); return }; setError(''); setStep(2) }}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-4 font-bold text-lg transition-colors">
-            Next: Build Score Sheet →
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl py-4 font-bold text-lg transition-colors">
+              {saving ? 'Saving…' : '✓ Save Game'}
+            </button>
+            <button
+              onClick={() => { if (!name.trim()) { setError('Please enter a game name.'); return }; setError(''); setStep(2) }}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-4 font-bold text-lg transition-colors">
+              Score Sheet →
+            </button>
+          </div>
         </div>
       )}
 
