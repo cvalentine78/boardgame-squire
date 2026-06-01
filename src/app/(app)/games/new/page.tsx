@@ -223,7 +223,7 @@ export default function NewGamePage() {
             </div>
             <div>
               <label className="block text-sm text-slate-500 mb-1">Description <span className="text-slate-400">(optional)</span></label>
-              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4}
                 className="w-full bg-slate-100 text-slate-800 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-slate-400"
                 placeholder="Notes about the game…" />
             </div>

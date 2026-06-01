@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       name: nameMatch ? decode(nameMatch[1]) : '',
-      description: descMatch ? decode(descMatch[1]).slice(0, 600) : '',
+      description: descMatch ? decode(descMatch[1]) : '',
       minPlayers: minMatch ? minMatch[1] : '',
       maxPlayers: maxMatch ? maxMatch[1] : '',
       thumbnail: thumbMatch ? thumbMatch[1].trim() : null,
