@@ -100,6 +100,10 @@ export default function GamesPage() {
           <div className="space-y-2">
             {games.map(game => {
               const isMine = !game.created_by || game.created_by === myUserId
+              const alreadyCopied = !isMine && games.some(g =>
+                g.name.toLowerCase() === game.name.toLowerCase() &&
+                (!g.created_by || g.created_by === myUserId)
+              )
               return (
                 <div key={game.id}>
                   {confirmId === game.id ? (
@@ -135,19 +139,25 @@ export default function GamesPage() {
                       </Link>
                       <div className="flex items-center gap-1 pr-2 shrink-0">
                         {!isMine ? (
-                          /* Party game — show Copy button instead of edit/delete/share */
-                          <button
-                            onClick={() => handleCopy(game)}
-                            disabled={copyingId === game.id}
-                            title="Copy to your library"
-                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                              copiedId === game.id
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                            }`}
-                          >
-                            {copiedId === game.id ? '✓ Copied!' : copyingId === game.id ? '...' : '📋 Copy'}
-                          </button>
+                          /* Party game — show Copy button or "already in library" */
+                          alreadyCopied ? (
+                            <span className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium text-emerald-600 bg-emerald-50">
+                              ✓ In your library
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleCopy(game)}
+                              disabled={copyingId === game.id}
+                              title="Copy to your library"
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                                copiedId === game.id
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                              }`}
+                            >
+                              {copiedId === game.id ? '✓ Copied!' : copyingId === game.id ? '...' : '📋 Copy'}
+                            </button>
+                          )
                         ) : (
                           <>
                             <button
