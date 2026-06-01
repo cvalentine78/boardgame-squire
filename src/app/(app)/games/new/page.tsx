@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { insertGame } from '@/lib/db'
+import { suggestCategories } from '@/lib/bgg-categories'
 
 type BggResult = { id: string; name: string; year: string }
 
@@ -30,6 +31,7 @@ export default function NewGamePage() {
 
   // Step 2 — score sheet
   const [categories, setCategories] = useState<string[]>([])
+  const [suggestedCats, setSuggestedCats] = useState<string[]>([])
   const [newCategory, setNewCategory] = useState('')
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editingValue, setEditingValue] = useState('')
@@ -66,6 +68,12 @@ export default function NewGamePage() {
         setMinPlayers(data.minPlayers || '')
         setMaxPlayers(data.maxPlayers || '')
         setBggThumbnail(data.thumbnail || null)
+        // Auto-suggest score categories from BGG mechanics
+        if (data.mechanics?.length) {
+          const suggested = suggestCategories(data.mechanics)
+          setSuggestedCats(suggested)
+          setCategories(suggested) // pre-fill — user can edit on step 2
+        }
       }
     } catch { /* ignore */ }
     setBggLoadingGame(false)
@@ -262,6 +270,16 @@ export default function NewGamePage() {
               <h2 className="font-semibold text-lg">Score Sheet for {name}</h2>
               <p className="text-sm text-slate-500 mt-1">Add each scoring category. These become the rows on the score sheet during every match.</p>
             </div>
+            {suggestedCats.length > 0 && (
+              <div className="flex items-start gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2.5">
+                <span className="text-indigo-400 text-sm shrink-0 mt-0.5">🎲</span>
+                <p className="text-xs text-indigo-600">
+                  <span className="font-semibold">Score sheet auto-filled from BGG mechanics.</span>{' '}
+                  Edit, reorder, or add rows below to match your copy of the game.
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCategory() } }}

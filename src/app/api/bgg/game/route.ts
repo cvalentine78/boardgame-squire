@@ -40,12 +40,16 @@ export async function GET(request: NextRequest) {
     const maxMatch = xml.match(/<maxplayers[^>]*value="(\d+)"/)
     const thumbMatch = xml.match(/<thumbnail>([\s\S]*?)<\/thumbnail>/)
 
+    const mechanics = [...xml.matchAll(/<link type="boardgamemechanic"[^>]*value="([^"]+)"/g)]
+      .map(m => decode(m[1]))
+
     return NextResponse.json({
       name: nameMatch ? decode(nameMatch[1]) : '',
       description: descMatch ? decode(descMatch[1]).slice(0, 600) : '',
       minPlayers: minMatch ? minMatch[1] : '',
       maxPlayers: maxMatch ? maxMatch[1] : '',
       thumbnail: thumbMatch ? thumbMatch[1].trim() : null,
+      mechanics,
     })
   } catch (err) {
     console.error('BGG game error:', err)

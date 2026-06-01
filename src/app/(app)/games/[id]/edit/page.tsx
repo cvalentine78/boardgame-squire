@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getGame, updateGame } from '@/lib/db'
+import { suggestCategories } from '@/lib/bgg-categories'
+
+type BggResult = { id: string; name: string; year: string }
 
 type Game = {
   id: string
@@ -42,6 +45,16 @@ export default function EditGamePage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // BGG search
+  const [bggQuery, setBggQuery] = useState('')
+  const [bggResults, setBggResults] = useState<BggResult[]>([])
+  const [bggSearching, setBggSearching] = useState(false)
+  const [bggLoadingGame, setBggLoadingGame] = useState(false)
+  const [bggThumbnail, setBggThumbnail] = useState<string | null>(null)
+  const [bggApplied, setBggApplied] = useState(false)
+  const [suggestedCats, setSuggestedCats] = useState<string[]>([])
+  const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     getGame(id).then((game) => {
       if (game) {
@@ -55,6 +68,52 @@ export default function EditGamePage() {
       setLoading(false)
     })
   }, [id])
+
+  function onBggInput(q: string) {
+    setBggQuery(q)
+    setBggResults([])
+    if (bggTimer.current) clearTimeout(bggTimer.current)
+    if (!q.trim()) return
+    bggTimer.current = setTimeout(async () => {
+      setBggSearching(true)
+      try {
+        const res = await fetch(`/api/bgg?query=${encodeURIComponent(q)}`)
+        const data = await res.json()
+        setBggResults(data.results ?? [])
+      } catch { /* ignore */ }
+      setBggSearching(false)
+    }, 500)
+  }
+
+  async function selectBggGame(bggId: string, gameName: string) {
+    setBggResults([])
+    setBggQuery('')
+    setBggLoadingGame(true)
+    try {
+      const res = await fetch(`/api/bgg/game?id=${bggId}`)
+      const data = await res.json()
+      if (data) {
+        setName(data.name || gameName)
+        setDescription(data.description || '')
+        setMinPlayers(data.minPlayers || '')
+        setMaxPlayers(data.maxPlayers || '')
+        setBggThumbnail(data.thumbnail || null)
+        setBggApplied(true)
+        // Suggest categories from mechanics (don't auto-replace existing ones)
+        if (data.mechanics?.length) {
+          const suggested = suggestCategories(data.mechanics)
+          setSuggestedCats(suggested)
+        }
+      }
+    } catch { /* ignore */ }
+    setBggLoadingGame(false)
+  }
+
+  function applySuggestedCategories() {
+    setCategories(suggestedCats)
+    setSuggestedCats([])
+    setStep(2)
+  }
 
   function addCategory() {
     const trimmed = newCategory.trim()
@@ -151,6 +210,51 @@ export default function EditGamePage() {
       {/* ── Step 1: Game Info ── */}
       {step === 1 && (
         <div className="space-y-5">
+
+          {/* BGG Search */}
+          <div className="bg-white rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-sm text-slate-700 uppercase tracking-wide">Update from BoardGameGeek</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Pull in fresh details or a new score sheet suggestion</p>
+              </div>
+              <a href="https://boardgamegeek.com" target="_blank" rel="noopener noreferrer" className="shrink-0">
+                <img src="https://cf.geekdo-images.com/powered-by-bgg/powered-by-bgg_sm.png" alt="Powered by BGG" className="h-6" />
+              </a>
+            </div>
+            <div className="relative">
+              <input type="text" value={bggQuery} onChange={e => onBggInput(e.target.value)}
+                placeholder="Search for this game on BGG…"
+                className="w-full bg-slate-100 text-slate-800 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400" />
+              {bggSearching && <span className="absolute right-3 top-3.5 text-slate-400 text-xs">Searching…</span>}
+            </div>
+            {bggResults.length > 0 && (
+              <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                {bggResults.map(r => (
+                  <button key={r.id} type="button" onClick={() => selectBggGame(r.id, r.name)}
+                    className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors flex items-center justify-between">
+                    <span className="font-medium text-slate-800">{r.name}</span>
+                    {r.year && <span className="text-slate-400 text-sm shrink-0 ml-2">{r.year}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {bggLoadingGame && <p className="text-sm text-indigo-500 text-center py-1">Loading game details…</p>}
+            {bggApplied && !bggLoadingGame && (
+              <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                {bggThumbnail && <img src={bggThumbnail} alt="" className="w-12 h-12 object-contain rounded-lg shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700 font-medium">Details updated from BGG ✓</p>
+                  {suggestedCats.length > 0 && (
+                    <p className="text-xs text-indigo-500 mt-0.5">
+                      Score sheet suggestions ready — choose on next step
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-2xl p-4 space-y-4">
             <div>
               <label className="block text-sm text-slate-500 mb-1">Game Name *</label>
@@ -275,6 +379,32 @@ export default function EditGamePage() {
                 These rows appear on every score sheet for this game. Changes apply to future matches.
               </p>
             </div>
+
+            {/* BGG suggested categories */}
+            {suggestedCats.length > 0 && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-indigo-700">🎲 BGG suggested score sheet ({suggestedCats.length} rows):</p>
+                <p className="text-xs text-indigo-600">{suggestedCats.join(' · ')}</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={applySuggestedCategories}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-2 text-sm font-semibold transition-colors">
+                    Apply (replaces current)
+                  </button>
+                  <button type="button" onClick={() => {
+                    setCategories(prev => {
+                      const existing = new Set(prev)
+                      return [...prev, ...suggestedCats.filter(c => !existing.has(c))]
+                    })
+                    setSuggestedCats([])
+                  }}
+                    className="flex-1 bg-white border border-indigo-300 hover:bg-indigo-50 text-indigo-700 rounded-lg py-2 text-sm font-semibold transition-colors">
+                    Add to existing
+                  </button>
+                  <button type="button" onClick={() => setSuggestedCats([])}
+                    className="px-3 text-slate-400 hover:text-slate-600 transition-colors">✕</button>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-2">
               <input
