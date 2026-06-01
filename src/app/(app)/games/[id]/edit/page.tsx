@@ -53,6 +53,7 @@ export default function EditGamePage() {
   const [bggThumbnail, setBggThumbnail] = useState<string | null>(null)
   const [bggApplied, setBggApplied] = useState(false)
   const [suggestedCats, setSuggestedCats] = useState<string[]>([])
+  const [previousCats, setPreviousCats] = useState<string[] | null>(null)
   const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -110,9 +111,16 @@ export default function EditGamePage() {
   }
 
   function applySuggestedCategories() {
+    setPreviousCats(categories) // save for undo
     setCategories(suggestedCats)
     setSuggestedCats([])
-    setStep(2)
+  }
+
+  function undoApply() {
+    if (previousCats !== null) {
+      setCategories(previousCats)
+      setPreviousCats(null)
+    }
   }
 
   function addCategory() {
@@ -380,6 +388,20 @@ export default function EditGamePage() {
               </p>
             </div>
 
+            {/* Undo banner — shown after applying suggestions */}
+            {previousCats !== null && suggestedCats.length === 0 && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className="text-sm text-amber-700 font-medium">BGG suggestions applied.</p>
+                <button
+                  type="button"
+                  onClick={undoApply}
+                  className="text-sm font-semibold text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  ↩ Undo
+                </button>
+              </div>
+            )}
+
             {/* BGG suggested categories */}
             {suggestedCats.length > 0 && (
               <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 space-y-2">
@@ -391,6 +413,7 @@ export default function EditGamePage() {
                     Apply (replaces current)
                   </button>
                   <button type="button" onClick={() => {
+                    setPreviousCats(categories)
                     setCategories(prev => {
                       const existing = new Set(prev)
                       return [...prev, ...suggestedCats.filter(c => !existing.has(c))]
