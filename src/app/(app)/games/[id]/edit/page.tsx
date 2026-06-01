@@ -4,8 +4,6 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getGame, updateGame } from '@/lib/db'
-import { suggestCategories } from '@/lib/bgg-categories'
-
 type BggResult = { id: string; name: string; year: string }
 
 type Game = {
@@ -55,8 +53,6 @@ export default function EditGamePage() {
   const [bggId, setBggId] = useState<string | null>(null)
   const [bggRating, setBggRating] = useState<number | null>(null)
   const [bggWeight, setBggWeight] = useState<number | null>(null)
-  const [suggestedCats, setSuggestedCats] = useState<string[]>([])
-  const [previousCats, setPreviousCats] = useState<string[] | null>(null)
   const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -106,27 +102,9 @@ export default function EditGamePage() {
         setBggRating(data.rating ?? null)
         setBggWeight(data.weight ?? null)
         setBggApplied(true)
-        // Suggest categories from mechanics (don't auto-replace existing ones)
-        if (data.mechanics?.length) {
-          const suggested = suggestCategories(data.mechanics)
-          setSuggestedCats(suggested)
-        }
       }
     } catch { /* ignore */ }
     setBggLoadingGame(false)
-  }
-
-  function applySuggestedCategories() {
-    setPreviousCats(categories) // save for undo
-    setCategories(suggestedCats)
-    setSuggestedCats([])
-  }
-
-  function undoApply() {
-    if (previousCats !== null) {
-      setCategories(previousCats)
-      setPreviousCats(null)
-    }
   }
 
   function addCategory() {
@@ -263,9 +241,6 @@ export default function EditGamePage() {
                 {bggThumbnail && <img src={bggThumbnail} alt="" className="w-12 h-12 object-contain rounded-lg shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-700 font-medium">Details updated from BGG ✓</p>
-                  {suggestedCats.length > 0 && (
-                    <p className="text-xs text-indigo-500 mt-0.5">Score sheet suggestions ready — choose on next step</p>
-                  )}
                   {bggId && (
                     <a href={`https://boardgamegeek.com/boardgame/${bggId}`} target="_blank" rel="noopener noreferrer"
                       className="text-xs text-indigo-500 hover:text-indigo-700 underline mt-0.5 inline-block">
@@ -409,47 +384,6 @@ export default function EditGamePage() {
                 These rows appear on every score sheet for this game. Changes apply to future matches.
               </p>
             </div>
-
-            {/* Undo banner — shown after applying suggestions */}
-            {previousCats !== null && suggestedCats.length === 0 && (
-              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                <p className="text-sm text-amber-700 font-medium">BGG suggestions applied.</p>
-                <button
-                  type="button"
-                  onClick={undoApply}
-                  className="text-sm font-semibold text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  ↩ Undo
-                </button>
-              </div>
-            )}
-
-            {/* BGG suggested categories */}
-            {suggestedCats.length > 0 && (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 space-y-2">
-                <p className="text-xs font-semibold text-indigo-700">🎲 BGG suggested score sheet ({suggestedCats.length} rows):</p>
-                <p className="text-xs text-indigo-600">{suggestedCats.join(' · ')}</p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={applySuggestedCategories}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg py-2 text-sm font-semibold transition-colors">
-                    Apply (replaces current)
-                  </button>
-                  <button type="button" onClick={() => {
-                    setPreviousCats(categories)
-                    setCategories(prev => {
-                      const existing = new Set(prev)
-                      return [...prev, ...suggestedCats.filter(c => !existing.has(c))]
-                    })
-                    setSuggestedCats([])
-                  }}
-                    className="flex-1 bg-white border border-indigo-300 hover:bg-indigo-50 text-indigo-700 rounded-lg py-2 text-sm font-semibold transition-colors">
-                    Add to existing
-                  </button>
-                  <button type="button" onClick={() => setSuggestedCats([])}
-                    className="px-3 text-slate-400 hover:text-slate-600 transition-colors">✕</button>
-                </div>
-              </div>
-            )}
 
             <div className="flex gap-2">
               <input
