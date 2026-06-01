@@ -123,10 +123,12 @@ export async function updateSession(id: string, body: object) {
 }
 
 export async function deleteSession(id: string) {
-  const { error } = await db()
-    .from('game_sessions')
-    .delete()
-    .eq('id', id)
+  const client = db()
+  // Delete related records first (foreign keys may not have CASCADE)
+  await client.from('messages').delete().eq('session_id', id)
+  await client.from('scores').delete().eq('session_id', id)
+  await client.from('session_players').delete().eq('session_id', id)
+  const { error } = await client.from('game_sessions').delete().eq('id', id)
   if (error) throw new Error(error.message)
 }
 
