@@ -400,6 +400,7 @@ export async function getAllScores() {
   const { data, error } = await db()
     .from('scores')
     .select('player_name,points,session_id')
+    .range(0, 9999)
   if (error) throw new Error(error.message)
   return data ?? []
 }
