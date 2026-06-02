@@ -54,6 +54,7 @@ export default function SessionPage() {
   const [unread, setUnread] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionRef = useRef<Session | null>(null)
+  const editingCellRef = useRef<EditingCell | null>(null)
 
   function animateTo(playerList: Player[], target: string) {
     if (playerList.length === 0) return
@@ -122,9 +123,10 @@ export default function SessionPage() {
   }, [id])
 
   useEffect(() => { sessionRef.current = session }, [session])
+  useEffect(() => { editingCellRef.current = editingCell }, [editingCell])
 
   const reloadScores = useCallback(async () => {
-    if (document.activeElement?.tagName === 'INPUT') return
+    if (editingCellRef.current) return  // don't reload while a player is mid-entry
     const scoreData = await getScores(id)
     const cats: string[] = sessionRef.current?.games?.scoring_categories ?? []
     const roundMap: Record<number, Record<string, string>> = {}
@@ -177,6 +179,14 @@ export default function SessionPage() {
 
     return () => { channel.unsubscribe() }
   }, [id, reloadScores])
+
+  // Poll every 5 seconds as a fallback for devices where Supabase Realtime
+  // isn't firing (e.g. Realtime not enabled on the scores table in the dashboard)
+  useEffect(() => {
+    if (!session || session.status !== 'active') return
+    const interval = setInterval(() => reloadScores(), 5000)
+    return () => clearInterval(interval)
+  }, [session, reloadScores])
 
   useEffect(() => {
     if (chatOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
