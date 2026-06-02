@@ -60,12 +60,11 @@ function NewSessionForm() {
     setError('')
 
     try {
-      const first = selectedNames[Math.floor(Math.random() * selectedNames.length)]
       const session = await insertSession({
         game_id: selectedGame.id,
         join_code: generateCode(),
         status: 'active',
-        first_player: first,
+        // first_player left null — session page picks randomly and runs the animation
       })
 
       await insertPlayers(

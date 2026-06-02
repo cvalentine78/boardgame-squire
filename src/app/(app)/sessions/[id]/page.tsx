@@ -303,8 +303,7 @@ export default function SessionPage() {
           turn_order: i + 1,
         }))
       )
-      const first = players[Math.floor(Math.random() * players.length)].name
-      await updateSession(newSession.id, { first_player: first })
+      // first_player left null — session page picks randomly and runs the animation
       router.push(`/sessions/${newSession.id}`)
     } catch (err) {
       alert('Error starting rematch: ' + (err instanceof Error ? err.message : String(err)))
