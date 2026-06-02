@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { getSession, getSessionPlayers, getScores, insertScores, deleteScores, upsertScore, deleteSingleScore, updatePlayerWinner, updateSession, deleteSession, insertSession, insertPlayers, getMessages, sendMessage } from '@/lib/db'
+import { getSession, getSessionPlayers, getScores, upsertScore, deleteSingleScore, updateSession, deleteSession, insertSession, insertPlayers, getMessages, sendMessage } from '@/lib/db'
 
 type Player = { id: string; name: string; is_winner: boolean }
 type RoundRow = { id: string; scores: Record<string, string> }
@@ -14,9 +14,14 @@ type Session = {
   games: { name: string; rules_pdf_url: string | null; scoring_categories: string[] | null } | null
 }
 
-function initials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+type EditingCell = {
+  rowId: string
+  playerName: string
+  rowIdx: number
+  label: string
+  currentValue: string
 }
+
 
 export default function SessionPage() {
   const { id } = useParams<{ id: string }>()
@@ -26,7 +31,6 @@ export default function SessionPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [rows, setRows] = useState<RoundRow[]>([{ id: '1', scores: {} }])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [winner, setWinner] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -34,6 +38,12 @@ export default function SessionPage() {
   const [firstPlayer, setFirstPlayer] = useState<string | null>(null)
   const [spinning, setSpinning] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Score cell modal
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
+  const [cellInput, setCellInput] = useState('')
+  const [cellSaving, setCellSaving] = useState(false)
+  const cellInputRef = useRef<HTMLInputElement>(null)
 
   // Chat
   const [messages, setMessages] = useState<Message[]>([])
@@ -44,7 +54,6 @@ export default function SessionPage() {
   const [unread, setUnread] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionRef = useRef<Session | null>(null)
-
 
   function animateTo(playerList: Player[], target: string) {
     if (playerList.length === 0) return
@@ -86,8 +95,6 @@ export default function SessionPage() {
     setPlayers(pl)
 
     const cats: string[] = sessionData?.games?.scoring_categories ?? []
-
-    // Build a round→scores map from whatever is in the database
     const roundMap: Record<number, Record<string, string>> = {}
     ;(scoreData ?? []).forEach((s: { round: number; player_name: string; points: number }) => {
       if (!roundMap[s.round]) roundMap[s.round] = {}
@@ -95,10 +102,8 @@ export default function SessionPage() {
     })
 
     if (cats.length > 0) {
-      // Category game: always show every category row, fill in scores where they exist
       setRows(cats.map((_, i) => ({ id: String(i + 1), scores: roundMap[i + 1] ?? {} })))
     } else {
-      // Round-based game: always show at least 10 rows, more if scores exist beyond that
       const maxRound = Math.max(10, ...Object.keys(roundMap).map(Number))
       setRows(Array.from({ length: maxRound }, (_, i) => ({
         id: String(i + 1),
@@ -108,26 +113,17 @@ export default function SessionPage() {
 
     setLoading(false)
 
-    // First player is stored in the database so all devices see the same result
     if (sessionData?.status === 'active' && pl.length > 0) {
       if (sessionData.first_player) {
-        // Already set — show without animation (may have been set by another device)
         setFirstPlayer(sessionData.first_player)
-      } else {
-        // Not set yet — this is the first load, randomize and save to DB
-        const target = pl[Math.floor(Math.random() * pl.length)].name
-        await updateSession(id, { first_player: target })
-        setTimeout(() => animateTo(pl, target), 600)
       }
+      // first_player left null until user taps "Pick First Player"
     }
   }, [id])
 
-  // Keep a ref to session so realtime callbacks can read categories without stale closure
   useEffect(() => { sessionRef.current = session }, [session])
 
-  // Reload only scores (used by realtime — avoids disrupting first-player animation)
   const reloadScores = useCallback(async () => {
-    // Don't clobber a cell the user is actively typing in
     if (document.activeElement?.tagName === 'INPUT') return
     const scoreData = await getScores(id)
     const cats: string[] = sessionRef.current?.games?.scoring_categories ?? []
@@ -149,7 +145,6 @@ export default function SessionPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Load messages and current user on mount
   useEffect(() => {
     getMessages(id).then(data => setMessages(data as Message[]))
     createClient().auth.getSession().then(({ data: { session } }) => {
@@ -157,7 +152,6 @@ export default function SessionPage() {
     })
   }, [id])
 
-  // Supabase Realtime channel — scores + chat
   useEffect(() => {
     const channel = createClient()
       .channel(`session-${id}`)
@@ -171,7 +165,6 @@ export default function SessionPage() {
       }, (payload) => {
         const msg = payload.new as Message
         setMessages(prev => {
-          // Avoid duplicates (our own send is already in state optimistically)
           if (prev.some(m => m.id === msg.id)) return prev
           return [...prev, msg]
         })
@@ -185,11 +178,16 @@ export default function SessionPage() {
     return () => { channel.unsubscribe() }
   }, [id, reloadScores])
 
-
-  // Auto-scroll chat to bottom when new messages arrive
   useEffect(() => {
     if (chatOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, chatOpen])
+
+  // Focus the cell input when the modal opens
+  useEffect(() => {
+    if (editingCell) {
+      setTimeout(() => cellInputRef.current?.focus(), 50)
+    }
+  }, [editingCell])
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault()
@@ -211,34 +209,6 @@ export default function SessionPage() {
     setRows(prev => prev.filter(r => r.id !== rowId))
   }
 
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastEdit = useRef<{ rowId: string; playerName: string } | null>(null)
-
-  function updateScore(rowId: string, playerName: string, value: string) {
-    setRows(prev => {
-      const updated = prev.map(r =>
-        r.id === rowId ? { ...r, scores: { ...r.scores, [playerName]: value } } : r
-      )
-      // Save only the changed cell — avoids overwriting other players' scores
-      lastEdit.current = { rowId, playerName }
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
-      autoSaveTimer.current = setTimeout(async () => {
-        const edit = lastEdit.current
-        if (!edit) return
-        const row = updated.find(r => r.id === edit.rowId)
-        if (!row) return
-        const roundIdx = updated.findIndex(r => r.id === edit.rowId)
-        const val = parseInt(row.scores[edit.playerName] ?? '')
-        if (isNaN(val)) {
-          await deleteSingleScore(id, edit.playerName, roundIdx + 1)
-        } else {
-          await upsertScore({ session_id: id, player_name: edit.playerName, points: val, round: roundIdx + 1 })
-        }
-      }, 800)
-      return updated
-    })
-  }
-
   function getTotal(playerName: string) {
     return rows.reduce((sum, row) => {
       const val = parseInt(row.scores[playerName] ?? '0')
@@ -246,25 +216,71 @@ export default function SessionPage() {
     }, 0)
   }
 
-  async function handleSave() {
-    setSaving(true)
-    // Upsert each cell individually so we don't overwrite other players' scores
-    const upserts: Promise<void>[] = []
-    rows.forEach((row, roundIdx) => {
-      players.forEach(p => {
-        const val = parseInt(row.scores[p.name] ?? '')
-        if (!isNaN(val)) {
-          upserts.push(upsertScore({ session_id: id, player_name: p.name, points: val, round: roundIdx + 1 }))
-        }
-      })
-    })
-    await Promise.all(upserts)
-    setSaving(false)
+  // Score cell modal
+  function openCell(rowId: string, playerName: string, rowIdx: number) {
+    const row = rows.find(r => r.id === rowId)
+    const currentValue = row?.scores[playerName] ?? ''
+    const cats: string[] = session?.games?.scoring_categories ?? []
+    const label = cats.length > 0
+      ? (cats[rowIdx] ?? `Round ${rowIdx + 1}`)
+      : `Round ${rowIdx + 1}`
+    setEditingCell({ rowId, playerName, rowIdx, label, currentValue })
+    setCellInput(currentValue)
   }
 
-  async function handleBack() {
-    if (!completed) await handleSave()
-    router.back()
+  async function handleCellSave() {
+    if (!editingCell || cellSaving) return
+    setCellSaving(true)
+    const { rowId, playerName, rowIdx } = editingCell
+    const val = parseInt(cellInput)
+
+    // Optimistic local update
+    setRows(prev => prev.map(r => {
+      if (r.id !== rowId) return r
+      if (isNaN(val)) {
+        const next = { ...r.scores }
+        delete next[playerName]
+        return { ...r, scores: next }
+      }
+      return { ...r, scores: { ...r.scores, [playerName]: String(val) } }
+    }))
+
+    setEditingCell(null)
+
+    try {
+      if (isNaN(val)) {
+        await deleteSingleScore(id, playerName, rowIdx + 1)
+      } else {
+        await upsertScore({ session_id: id, player_name: playerName, points: val, round: rowIdx + 1 })
+      }
+      await reloadScores()
+    } catch {
+      await reloadScores() // revert to DB state on error
+    }
+    setCellSaving(false)
+  }
+
+  async function handleCellClear() {
+    if (!editingCell || cellSaving) return
+    setCellSaving(true)
+    const { rowId, playerName, rowIdx } = editingCell
+
+    setRows(prev => prev.map(r => {
+      if (r.id !== rowId) return r
+      const next = { ...r.scores }
+      delete next[playerName]
+      return { ...r, scores: next }
+    }))
+
+    setEditingCell(null)
+
+    try {
+      await deleteSingleScore(id, playerName, rowIdx + 1)
+      await reloadScores()
+    } catch {
+      await reloadScores()
+    }
+    setCellSaving(false)
   }
 
   async function handleDelete() {
@@ -303,19 +319,14 @@ export default function SessionPage() {
           turn_order: i + 1,
         }))
       )
-      // first_player left null — session page picks randomly and runs the animation
       router.push(`/sessions/${newSession.id}`)
     } catch (err) {
-      alert('Error starting rematch: ' + (err instanceof Error ? err.message : String(err)))
+      console.error('Error starting rematch:', err)
     }
   }
 
   async function handleEndGame(resolvedWinner?: string) {
     try {
-      await handleSave()
-
-      // Re-fetch scores from DB to get the true totals before declaring a winner
-      // (avoids wrong result if one player's screen had stale data when ending the game)
       let winner = resolvedWinner
       if (!winner) {
         const latestScores = await getScores(id)
@@ -332,7 +343,7 @@ export default function SessionPage() {
       await updateSession(id, { status: 'completed', winner_name: winner ?? null })
       fetchData()
     } catch (err) {
-      alert('Error ending game: ' + (err instanceof Error ? err.message : String(err)))
+      console.error('Error ending game:', err)
     }
   }
 
@@ -346,7 +357,6 @@ export default function SessionPage() {
   const categories: string[] = session.games?.scoring_categories ?? []
   const hasCategories = categories.length > 0
 
-  // Winner logic: auto from scores, tie-break if needed
   const hasAnyScore = sortedByScore.some(p => p.total !== 0)
   const highScore = sortedByScore[0]?.total ?? 0
   const tiedPlayers = hasAnyScore ? sortedByScore.filter(p => p.total === highScore) : []
@@ -354,22 +364,26 @@ export default function SessionPage() {
   const autoWinner = !isTie && tiedPlayers.length === 1 ? tiedPlayers[0].name : null
 
   return (
-    <div className="pb-24">
+    <div className="pb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <button onClick={handleBack} className="text-slate-400 hover:text-slate-700">←</button>
+          <button onClick={() => router.back()} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">←</button>
           <div>
             <h1 className="text-lg font-bold text-white">{session.games?.name}</h1>
-            <span className="text-xs text-indigo-400 font-mono">{session.join_code}</span>
+            <button
+              onClick={async () => {
+                await navigator.clipboard.writeText(session.join_code)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2500)
+              }}
+              className="text-xs text-indigo-400 font-mono hover:text-indigo-300 transition-colors"
+              title="Tap to copy join code"
+            >
+              {copied ? '✓ Copied!' : session.join_code}
+            </button>
           </div>
         </div>
-        {!completed && (
-          <button onClick={handleSave} disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-4 py-2 rounded-lg font-semibold text-sm text-white">
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        )}
       </div>
 
       {session.games?.rules_pdf_url && (
@@ -390,12 +404,12 @@ export default function SessionPage() {
             onClick={() => pickFirst(players)}
             disabled={spinning}
             className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-6 py-2 rounded-xl text-sm font-semibold transition-colors">
-            {spinning ? 'Picking...' : '🔀 Re-roll'}
+            {spinning ? 'Picking...' : firstPlayer ? '🔀 Re-roll' : '🔀 Pick First Player'}
           </button>
         </div>
       )}
 
-      {/* Score Grid — white card for maximum readability */}
+      {/* Score Grid */}
       <div className="bg-white rounded-2xl overflow-hidden mb-4 shadow-lg">
         {/* Player headers */}
         <div className="flex border-b-2 border-slate-200">
@@ -429,22 +443,25 @@ export default function SessionPage() {
                 )}
               </div>
             )}
-            {players.map(p => (
-              <div key={p.id} className="flex-1 border-l border-slate-100">
-                {completed ? (
-                  <div className="text-center py-3 text-sm text-slate-700 font-medium">{row.scores[p.name] ?? '—'}</div>
-                ) : (
-                  <input
-                    type="number"
-                    value={row.scores[p.name] ?? ''}
-                    onChange={e => updateScore(row.id, p.name, e.target.value)}
-                    onWheel={e => e.currentTarget.blur()}
-                    placeholder="—"
-                    className="w-full text-center bg-transparent py-3 text-sm text-slate-800 font-medium focus:outline-none focus:bg-indigo-50 placeholder-slate-300"
-                  />
-                )}
-              </div>
-            ))}
+            {players.map(p => {
+              const val = row.scores[p.name]
+              return (
+                <div key={p.id} className="flex-1 border-l border-slate-100">
+                  {completed ? (
+                    <div className="text-center py-3 text-sm text-slate-700 font-medium">{val ?? '—'}</div>
+                  ) : (
+                    <button
+                      onClick={() => openCell(row.id, p.name, rowIdx)}
+                      className={`w-full py-3 text-sm font-medium text-center transition-colors hover:bg-indigo-50 active:bg-indigo-100 ${
+                        val !== undefined ? 'text-slate-800' : 'text-slate-300'
+                      }`}
+                    >
+                      {val ?? '—'}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         ))}
 
@@ -489,7 +506,6 @@ export default function SessionPage() {
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3">
           <h2 className="font-semibold text-white">End Game</h2>
 
-          {/* Tie-breaker — only shown when scores are level */}
           {isTie && (
             <div className="space-y-2">
               <p className="text-sm text-amber-400 font-medium text-center">
@@ -516,10 +532,10 @@ export default function SessionPage() {
             disabled={isTie && !winner}
             className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3 font-semibold transition-colors">
             {isTie
-              ? (winner ? `🏆 ${winner} wins — Save & End` : 'Pick a winner above')
+              ? (winner ? `🏆 ${winner} wins — End Game` : 'Pick a winner above')
               : autoWinner
-                ? `🏆 ${autoWinner} wins — Save & End`
-                : 'Save & End Game'}
+                ? `🏆 ${autoWinner} wins — End Game`
+                : 'End Game'}
           </button>
         </div>
       )}
@@ -553,7 +569,6 @@ export default function SessionPage() {
 
       {/* Chat */}
       <div className="mt-4 bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-        {/* Chat header / toggle */}
         <button
           onClick={() => { setChatOpen(v => !v); setUnread(0) }}
           className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-700/50 transition-colors"
@@ -573,7 +588,6 @@ export default function SessionPage() {
 
         {chatOpen && (
           <div className="border-t border-slate-700">
-            {/* Message list */}
             <div className="h-56 overflow-y-auto px-3 py-3 space-y-2">
               {messages.length === 0 ? (
                 <p className="text-center text-slate-500 text-sm py-8">No messages yet — say something! 👋</p>
@@ -602,7 +616,6 @@ export default function SessionPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <form onSubmit={handleSend} className="border-t border-slate-700 flex gap-2 p-2">
               <input
                 type="text"
@@ -647,6 +660,58 @@ export default function SessionPage() {
           </div>
         )}
       </div>
+
+      {/* Score cell modal — bottom sheet */}
+      {editingCell && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          onClick={e => { if (e.target === e.currentTarget) setEditingCell(null) }}
+        >
+          {/* Scrim */}
+          <div className="absolute inset-0 bg-black/60" onClick={() => setEditingCell(null)} />
+
+          {/* Sheet */}
+          <div className="relative bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-2xl space-y-5">
+            {/* Drag handle */}
+            <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto -mt-1 mb-1" />
+
+            <div>
+              <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">{editingCell.label}</p>
+              <p className="text-xl font-bold text-slate-800 mt-0.5">{editingCell.playerName}</p>
+            </div>
+
+            <input
+              ref={cellInputRef}
+              type="number"
+              value={cellInput}
+              onChange={e => setCellInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleCellSave() }}
+              onWheel={e => e.currentTarget.blur()}
+              placeholder="Enter score…"
+              className="w-full text-center text-4xl font-bold bg-slate-100 text-slate-800 rounded-2xl px-4 py-5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-300"
+            />
+
+            <div className="flex gap-3">
+              {editingCell.currentValue !== '' && (
+                <button
+                  onClick={handleCellClear}
+                  disabled={cellSaving}
+                  className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm transition-colors disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                onClick={handleCellSave}
+                disabled={cellSaving}
+                className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base transition-colors disabled:opacity-40"
+              >
+                {cellSaving ? 'Saving…' : 'Save Score'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

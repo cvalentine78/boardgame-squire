@@ -1,6 +1,7 @@
 'use client'
 
 import NavBar from '@/components/NavBar'
+import BottomNav from '@/components/BottomNav'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -33,9 +34,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="bg-slate-900 border-b border-slate-700 flex justify-center">
         <NavBar />
       </div>
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-10">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-28">
         {children}
       </main>
+      <BottomNav />
     </div>
   )
 }
