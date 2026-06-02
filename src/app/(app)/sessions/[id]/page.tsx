@@ -671,56 +671,59 @@ export default function SessionPage() {
         )}
       </div>
 
-      {/* Score cell modal — top-anchored so the keyboard never covers it */}
+      {/* Score cell modal — sits near the top so the keyboard never covers it */}
       {editingCell && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-start pt-20 px-4">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-start pt-12 px-4">
           {/* Scrim */}
           <div className="absolute inset-0 bg-black/60" onClick={() => setEditingCell(null)} />
 
           {/* Card */}
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-4 space-y-3">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">{editingCell.label}</p>
-                <p className="text-lg font-bold text-slate-800">{editingCell.playerName}</p>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            {/* Coloured header strip */}
+            <div className="bg-indigo-600 px-4 py-3 flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-indigo-200 text-xs font-semibold uppercase tracking-wide truncate">{editingCell.label}</p>
+                <p className="text-white font-bold text-base leading-tight truncate">{editingCell.playerName}</p>
               </div>
               <button
                 onClick={() => setEditingCell(null)}
-                className="text-slate-400 hover:text-slate-600 text-xl leading-none p-1"
+                className="text-indigo-200 hover:text-white text-lg leading-none ml-3 shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <input
-              ref={cellInputRef}
-              type="number"
-              value={cellInput}
-              onChange={e => setCellInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCellSave() }}
-              onWheel={e => e.currentTarget.blur()}
-              placeholder="0"
-              className="w-full text-center text-4xl font-bold bg-slate-100 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-300"
-            />
+            {/* Body */}
+            <div className="p-3 space-y-3">
+              <input
+                ref={cellInputRef}
+                type="number"
+                value={cellInput}
+                onChange={e => setCellInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCellSave() }}
+                onWheel={e => e.currentTarget.blur()}
+                placeholder="0"
+                className="w-full text-center text-5xl font-bold bg-slate-100 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-300"
+              />
 
-            <div className="flex gap-2">
-              {editingCell.currentValue !== '' && (
+              <div className="flex gap-2">
+                {editingCell.currentValue !== '' && (
+                  <button
+                    onClick={handleCellClear}
+                    disabled={cellSaving}
+                    className="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm transition-colors disabled:opacity-40"
+                  >
+                    Clear
+                  </button>
+                )}
                 <button
-                  onClick={handleCellClear}
+                  onClick={handleCellSave}
                   disabled={cellSaving}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm transition-colors disabled:opacity-40"
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors disabled:opacity-40"
                 >
-                  Clear
+                  {cellSaving ? 'Saving…' : 'Save Score'}
                 </button>
-              )}
-              <button
-                onClick={handleCellSave}
-                disabled={cellSaving}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors disabled:opacity-40"
-              >
-                {cellSaving ? 'Saving…' : 'Save Score'}
-              </button>
+              </div>
             </div>
           </div>
         </div>
