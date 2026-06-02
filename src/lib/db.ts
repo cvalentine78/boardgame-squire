@@ -148,6 +148,7 @@ export async function getAllSessionPlayers(): Promise<any[]> {
   const { data, error } = await db()
     .from('session_players')
     .select('player_name,session_id,game_sessions(id,status,winner_name,games(name))')
+    .range(0, 9999)
   if (error) throw new Error(error.message)
   return (data ?? []) as any[]
 }
