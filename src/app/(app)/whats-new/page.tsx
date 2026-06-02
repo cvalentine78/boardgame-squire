@@ -14,7 +14,7 @@
  *   - body: 2–3 sentences covering the group of changes
  */
 
-export const metadata = { title: "What's New — Boardgame Squire" }
+export const metadata = { title: "What's New - Boardgame Squire" }
 
 const badge = {
   new:    'bg-indigo-100 text-indigo-700 border border-indigo-200',
@@ -49,7 +49,7 @@ export default function WhatsNewPage() {
               </header>
               <h3 id="entry-20260601-bgg" className="text-white font-semibold">Deeper BoardGameGeek integration</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Games imported from BGG now show a thumbnail image, community rating (out of 10), and complexity score with a plain-English label like &quot;Medium-Heavy.&quot; BGG search is also available when editing an existing game — tap Edit, search BGG, and all the details update in one step. A &quot;View on BGG&quot; link on each game&apos;s detail page takes you straight to the rules and files section.
+                Games imported from BGG now show a thumbnail image, community rating (out of 10), and complexity score with a plain-English label like &quot;Medium-Heavy.&quot; BGG search is also available when editing an existing game - tap Edit, search BGG, and all the details update in one step. A &quot;View on BGG&quot; link on each game&apos;s detail page takes you straight to the rules and files section.
               </p>
             </article>
           </li>
@@ -85,7 +85,7 @@ export default function WhatsNewPage() {
               </header>
               <h3 id="entry-20260519-realtime" className="text-white font-semibold">Live match chat, real-time scores, emoji avatars, and multiple parties</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                A collapsible chat panel appears on every active session so players can message each other mid-game, and score changes from other devices now appear automatically without refreshing. Every player in your roster can be assigned an emoji avatar chosen from 17 categories, which shows up in the player picker and score sheet. You can also now belong to multiple parties at once — useful for keeping a family group separate from a game-night crew.
+                A collapsible chat panel appears on every active session so players can message each other mid-game, and score changes from other devices now appear automatically without refreshing. Every player in your roster can be assigned an emoji avatar chosen from 17 categories, which shows up in the player picker and score sheet. You can also now belong to multiple parties at once, useful for keeping a family group separate from a game-night crew.
               </p>
             </article>
           </li>
@@ -98,7 +98,7 @@ export default function WhatsNewPage() {
               </header>
               <h3 id="entry-20260518-launch" className="text-white font-semibold">Boardgame Squire launches with Google Sign-In and party sharing</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Initial release — add your game library, build a player roster, start a match, and keep score round by round with a Who Goes First randomizer and end-game winner declaration. Sign in with Google to sync everything across devices and share with friends via the party system. Several early scoring bugs were fixed in the first days, including concurrent score overwrites and the wrong winner being declared in multi-device sessions.
+                Initial release - add your game library, build a player roster, start a match, and keep score round by round with a Who Goes First randomizer and end-game winner declaration. Sign in with Google to sync everything across devices and share with friends via the party system. Several early scoring bugs were fixed in the first days, including concurrent score overwrites and the wrong winner being declared in multi-device sessions.
               </p>
             </article>
           </li>
