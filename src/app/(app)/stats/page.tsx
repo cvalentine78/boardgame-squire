@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getAllSessionPlayers, getAllScores, getMyParties } from '@/lib/db'
+import { getAllSessionPlayers, getScoresForSessions, getMyParties } from '@/lib/db'
 
 type Row = {
   player_name: string
@@ -42,11 +42,17 @@ export default function StatsPage() {
   const [totalSessions, setTotalSessions] = useState(0)
 
   useEffect(() => {
-    Promise.all([getAllSessionPlayers(), getAllScores(), getMyParties()]).then(([rows, scoreRows, partyList]) => {
+    Promise.all([getAllSessionPlayers(), getMyParties()]).then(async ([rows, partyList]) => {
       setAllRows(rows ?? [])
-      setAllScores(scoreRows ?? [])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setParties((partyList as any[]).filter(p => p.game_id))  // only parties with a game are useful here
+      setParties((partyList as any[]).filter(p => p.game_id))
+
+      // Fetch scores only for the sessions we know about — avoids RLS issues
+      // that occur when querying the scores table without a session_id filter
+      const sessionIds = [...new Set((rows ?? []).map((r: Row) => r.session_id))]
+      const scoreRows = await getScoresForSessions(sessionIds)
+      setAllScores(scoreRows ?? [])
+
       setLoading(false)
     })
   }, [])

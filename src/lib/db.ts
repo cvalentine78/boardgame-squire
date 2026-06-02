@@ -406,6 +406,17 @@ export async function getAllScores() {
   return data ?? []
 }
 
+export async function getScoresForSessions(sessionIds: string[]) {
+  if (sessionIds.length === 0) return []
+  const { data, error } = await db()
+    .from('scores')
+    .select('player_name,points,session_id')
+    .in('session_id', sessionIds)
+    .range(0, 9999)
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
 export async function insertScores(rows: object[]) {
   const { data, error } = await db()
     .from('scores')
