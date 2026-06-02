@@ -15,7 +15,7 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 flex items-stretch justify-around" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 flex items-stretch justify-around" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {NAV_ITEMS.map(item => {
         const active =
           item.href === '/dashboard'

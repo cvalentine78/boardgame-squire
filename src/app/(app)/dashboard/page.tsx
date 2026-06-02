@@ -31,7 +31,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Link href="/sessions/new"
           className="bg-indigo-600 hover:bg-indigo-500 rounded-xl p-4 text-center transition-colors text-white">
           <div className="text-2xl mb-1">🃏</div>
@@ -63,12 +63,12 @@ export default function DashboardPage() {
           <div className="font-semibold text-sm text-slate-700">Players</div>
         </Link>
         <Link href="/party"
-          className="bg-white hover:bg-slate-50 rounded-xl p-4 text-center transition-colors border border-slate-200 shadow-sm col-span-2">
+          className="bg-white hover:bg-slate-50 rounded-xl p-4 text-center transition-colors border border-slate-200 shadow-sm col-span-2 md:col-span-1">
           <div className="text-2xl mb-1">🎉</div>
-          <div className="font-semibold text-sm text-slate-700">Party — Share with Friends</div>
+          <div className="font-semibold text-sm text-slate-700">Party</div>
         </Link>
         <Link href="/whats-new"
-          className="bg-slate-800 hover:bg-slate-700 rounded-xl p-4 text-center transition-colors border border-slate-700 col-span-2">
+          className="bg-slate-800 hover:bg-slate-700 rounded-xl p-4 text-center transition-colors border border-slate-700 col-span-2 md:col-span-1">
           <div className="text-2xl mb-1">📣</div>
           <div className="font-semibold text-sm text-slate-300">What&apos;s New</div>
         </Link>

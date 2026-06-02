@@ -34,7 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="bg-slate-900 border-b border-slate-700 flex justify-center">
         <NavBar />
       </div>
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-28">
+      <main className="flex-1 max-w-2xl md:max-w-5xl mx-auto w-full px-4 py-6 pb-28 md:pb-8">
         {children}
       </main>
       <BottomNav />
