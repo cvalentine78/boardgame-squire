@@ -671,23 +671,26 @@ export default function SessionPage() {
         )}
       </div>
 
-      {/* Score cell modal — bottom sheet */}
+      {/* Score cell modal — top-anchored so the keyboard never covers it */}
       {editingCell && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col justify-end"
-          onClick={e => { if (e.target === e.currentTarget) setEditingCell(null) }}
-        >
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-start pt-20 px-4">
           {/* Scrim */}
           <div className="absolute inset-0 bg-black/60" onClick={() => setEditingCell(null)} />
 
-          {/* Sheet */}
-          <div className="relative bg-white rounded-t-3xl px-5 pt-5 pb-10 shadow-2xl space-y-5">
-            {/* Drag handle */}
-            <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto -mt-1 mb-1" />
-
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">{editingCell.label}</p>
-              <p className="text-xl font-bold text-slate-800 mt-0.5">{editingCell.playerName}</p>
+          {/* Card */}
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-4 space-y-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">{editingCell.label}</p>
+                <p className="text-lg font-bold text-slate-800">{editingCell.playerName}</p>
+              </div>
+              <button
+                onClick={() => setEditingCell(null)}
+                className="text-slate-400 hover:text-slate-600 text-xl leading-none p-1"
+              >
+                ✕
+              </button>
             </div>
 
             <input
@@ -697,16 +700,16 @@ export default function SessionPage() {
               onChange={e => setCellInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleCellSave() }}
               onWheel={e => e.currentTarget.blur()}
-              placeholder="Enter score…"
-              className="w-full text-center text-4xl font-bold bg-slate-100 text-slate-800 rounded-2xl px-4 py-5 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-300"
+              placeholder="0"
+              className="w-full text-center text-4xl font-bold bg-slate-100 text-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-300"
             />
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               {editingCell.currentValue !== '' && (
                 <button
                   onClick={handleCellClear}
                   disabled={cellSaving}
-                  className="px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm transition-colors disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm transition-colors disabled:opacity-40"
                 >
                   Clear
                 </button>
@@ -714,7 +717,7 @@ export default function SessionPage() {
               <button
                 onClick={handleCellSave}
                 disabled={cellSaving}
-                className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base transition-colors disabled:opacity-40"
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors disabled:opacity-40"
               >
                 {cellSaving ? 'Saving…' : 'Save Score'}
               </button>
