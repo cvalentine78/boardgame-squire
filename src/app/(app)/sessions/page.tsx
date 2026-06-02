@@ -78,11 +78,9 @@ export default function SessionsPage() {
                   }`}>
                   {isWinner && <span>🏆</span>}
                   <span>{p.player_name}</span>
-                  {score !== undefined && (
-                    <span className={`font-bold ${isWinner ? 'text-yellow-700' : 'text-slate-800'}`}>
-                      {score}
-                    </span>
-                  )}
+                  <span className={`font-bold ${isWinner ? 'text-yellow-700' : 'text-slate-800'}`}>
+                    {score ?? 0}
+                  </span>
                 </div>
               )
             })}

@@ -261,11 +261,9 @@ export default function StatsPage() {
                             <span className="text-xs text-slate-500 w-16 text-right">
                               {p.wins}W – {p.played - p.wins}L
                             </span>
-                            {p.bestScore !== null && (
-                              <span className="text-xs text-emerald-600 font-semibold w-14 text-right">
-                                Best: {p.bestScore}
-                              </span>
-                            )}
+                            <span className="text-xs text-emerald-600 font-semibold w-14 text-right">
+                              {p.bestScore !== null ? `Best: ${p.bestScore}` : '—'}
+                            </span>
                             <span className={`text-xs font-semibold w-10 text-right ${
                               winRate >= 50 ? 'text-indigo-600' : 'text-slate-400'
                             }`}>
