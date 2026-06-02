@@ -2,18 +2,24 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getSessions, getAllScores } from '@/lib/db'
+import { getSessions, getScoresForSessions } from '@/lib/db'
 
 type Session = {
   id: string
   status: string
   join_code: string
   winner_name: string | null
+  created_at: string
   games: { name: string } | null
   session_players: { player_name: string }[]
 }
 
 type ScoreRow = { player_name: string; points: number; session_id: string }
+
+function formatDate(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
@@ -21,10 +27,15 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getSessions(), getAllScores()]).then(([sessionData, scoreData]) => {
-      setSessions(Array.isArray(sessionData) ? sessionData : [])
+    getSessions().then(async (sessionData) => {
+      const all: Session[] = Array.isArray(sessionData) ? sessionData : []
+      setSessions(all)
 
-      // Build per-session per-player totals
+      // Fetch scores only for the sessions we know about —
+      // avoids RLS silently dropping rows on an unfiltered scores query
+      const sessionIds = all.map(s => s.id)
+      const scoreData = await getScoresForSessions(sessionIds)
+
       const totals: Record<string, Record<string, number>> = {}
       ;(scoreData ?? []).forEach((s: ScoreRow) => {
         if (!totals[s.session_id]) totals[s.session_id] = {}
@@ -44,7 +55,6 @@ export default function SessionsPage() {
     const hasScores = Object.keys(scores).length > 0
     const isCompleted = session.status === 'completed'
 
-    // Sort players by score descending for completed, turn order for active
     const sortedPlayers = [...players].sort((a, b) => {
       if (isCompleted && hasScores) return (scores[b.player_name] ?? 0) - (scores[a.player_name] ?? 0)
       return 0
@@ -54,13 +64,18 @@ export default function SessionsPage() {
       <Link href={`/sessions/${session.id}`}
         className="block bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors overflow-hidden">
         {/* Header row */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between px-4 pt-3 pb-1">
           <span className="font-semibold text-slate-800">{session.games?.name ?? 'Unknown game'}</span>
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${
             isCompleted ? 'bg-slate-100 text-slate-500' : 'bg-green-100 text-green-700'
           }`}>
             {isCompleted ? 'done' : 'active'}
           </span>
+        </div>
+
+        {/* Date */}
+        <div className="px-4 pb-2">
+          <span className="text-xs text-slate-400">{formatDate(session.created_at)}</span>
         </div>
 
         {/* Player scores */}
