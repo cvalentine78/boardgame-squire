@@ -9,7 +9,7 @@ function db() {
 export async function getGames() {
   const { data, error } = await db()
     .from('games')
-    .select('id,name,min_players,max_players,scoring_categories,is_shared,created_by,thumbnail_url,bgg_id,bgg_rating,bgg_weight')
+    .select('id,name,min_players,max_players,scoring_categories,is_shared,created_by,thumbnail_url,image_url,bgg_id,bgg_rating,bgg_weight,bgg_rank,min_playtime,max_playtime,best_players')
     .order('name')
   if (error) throw new Error(error.message)
   return data ?? []
@@ -23,7 +23,7 @@ export async function copyGame(gameId: string) {
 
   const { data: original, error: fetchErr } = await client
     .from('games')
-    .select('name,description,min_players,max_players,rules_pdf_url,scoring_categories')
+    .select('name,description,min_players,max_players,rules_pdf_url,scoring_categories,thumbnail_url,image_url,bgg_id,bgg_rating,bgg_weight,bgg_rank,min_playtime,max_playtime,best_players')
     .eq('id', gameId)
     .single()
   if (fetchErr || !original) throw new Error('Game not found')

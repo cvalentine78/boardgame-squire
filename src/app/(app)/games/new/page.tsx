@@ -22,6 +22,11 @@ export default function NewGamePage() {
   const [bggId, setBggId] = useState<string | null>(null)
   const [bggRating, setBggRating] = useState<number | null>(null)
   const [bggWeight, setBggWeight] = useState<number | null>(null)
+  const [bggRank, setBggRank] = useState<number | null>(null)
+  const [bggImage, setBggImage] = useState<string | null>(null)
+  const [minPlaytime, setMinPlaytime] = useState<number | null>(null)
+  const [maxPlaytime, setMaxPlaytime] = useState<number | null>(null)
+  const [bestPlayers, setBestPlayers] = useState<number | null>(null)
   const bggTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Step 1 — game info
@@ -70,8 +75,13 @@ export default function NewGamePage() {
         setMinPlayers(data.minPlayers || '')
         setMaxPlayers(data.maxPlayers || '')
         setBggThumbnail(data.thumbnail || null)
+        setBggImage(data.image || null)
         setBggRating(data.rating ?? null)
         setBggWeight(data.weight ?? null)
+        setBggRank(data.bggRank ?? null)
+        setMinPlaytime(data.minPlaytime ?? null)
+        setMaxPlaytime(data.maxPlaytime ?? null)
+        setBestPlayers(data.bestPlayers ?? null)
       }
     } catch { /* ignore */ }
     setBggLoadingGame(false)
@@ -130,9 +140,14 @@ export default function NewGamePage() {
         rules_pdf_url: pdfUrl,
         scoring_categories: categories,
         thumbnail_url: bggThumbnail || null,
+        image_url: bggImage || null,
         bgg_id: bggId || null,
         bgg_rating: bggRating,
         bgg_weight: bggWeight,
+        bgg_rank: bggRank,
+        min_playtime: minPlaytime,
+        max_playtime: maxPlaytime,
+        best_players: bestPlayers,
       })
       router.push('/games')
     } catch (err: unknown) {

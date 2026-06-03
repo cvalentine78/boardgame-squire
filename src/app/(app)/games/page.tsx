@@ -19,6 +19,10 @@ type Game = {
   bgg_id: string | null
   bgg_rating: number | null
   bgg_weight: number | null
+  bgg_rank: number | null
+  min_playtime: number | null
+  max_playtime: number | null
+  best_players: number | null
 }
 
 export default function GamesPage() {
@@ -148,10 +152,17 @@ export default function GamesPage() {
                               ? `${game.min_players ? ' · ' : ''}${game.scoring_categories.length} scoring categories`
                               : ''}
                           </div>
-                          {(game.bgg_rating || game.bgg_weight) && (
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {game.bgg_rating && <span className="text-xs text-amber-600 font-medium">⭐ {game.bgg_rating}</span>}
+                          {(game.bgg_rating || game.bgg_weight || game.min_playtime || game.max_playtime) && (
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              {game.bgg_rating && <span className="text-xs text-amber-600 font-medium">⭐ {game.bgg_rating}{game.bgg_rank ? ` · #${game.bgg_rank}` : ''}</span>}
                               {game.bgg_weight && <span className="text-xs text-slate-400">· Complexity {game.bgg_weight}/5</span>}
+                              {(game.min_playtime || game.max_playtime) && (
+                                <span className="text-xs text-slate-400">
+                                  · {game.min_playtime && game.max_playtime && game.min_playtime !== game.max_playtime
+                                    ? `${game.min_playtime}–${game.max_playtime} min`
+                                    : `${game.max_playtime ?? game.min_playtime} min`}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>

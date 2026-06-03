@@ -17,9 +17,14 @@ type Game = {
   is_shared: boolean | null
   created_by: string | null
   thumbnail_url: string | null
+  image_url: string | null
   bgg_id: string | null
   bgg_rating: number | null
   bgg_weight: number | null
+  bgg_rank: number | null
+  min_playtime: number | null
+  max_playtime: number | null
+  best_players: number | null
 }
 
 export default function GameDetailPage() {
@@ -94,12 +99,12 @@ export default function GameDetailPage() {
         <h1 className="text-2xl font-bold text-white">{game.name}</h1>
       </div>
 
-      {/* Thumbnail */}
-      {game.thumbnail_url && (
+      {/* Game image */}
+      {(game.image_url || game.thumbnail_url) && (
         <div className="flex justify-center">
-          <Image src={game.thumbnail_url} alt={game.name} width={128} height={128}
+          <Image src={game.image_url || game.thumbnail_url!} alt={game.name} width={200} height={200}
             priority
-            className="w-32 h-32 object-contain rounded-2xl bg-white shadow-lg p-2" />
+            className="w-48 h-48 object-contain rounded-2xl bg-white shadow-lg p-2" />
         </div>
       )}
 
@@ -108,7 +113,20 @@ export default function GameDetailPage() {
         {game.min_players && game.max_players && (
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Players</span>
-            <span className="text-slate-800 font-medium">{game.min_players}–{game.max_players}</span>
+            <span className="text-slate-800 font-medium">
+              {game.min_players}–{game.max_players}
+              {game.best_players ? <span className="text-slate-400 font-normal"> · Best at {game.best_players}</span> : ''}
+            </span>
+          </div>
+        )}
+        {(game.min_playtime || game.max_playtime) && (
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Play time</span>
+            <span className="text-slate-800 font-medium">
+              {game.min_playtime && game.max_playtime && game.min_playtime !== game.max_playtime
+                ? `${game.min_playtime}–${game.max_playtime} min`
+                : `${game.max_playtime ?? game.min_playtime} min`}
+            </span>
           </div>
         )}
         {game.scoring_categories && game.scoring_categories.length > 0 && (
@@ -126,7 +144,7 @@ export default function GameDetailPage() {
         {game.bgg_rating && (
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">BGG Rating</span>
-            <span className="text-slate-800 font-medium">⭐ {game.bgg_rating} / 10</span>
+            <span className="text-slate-800 font-medium">⭐ {game.bgg_rating} / 10{game.bgg_rank ? <span className="text-slate-400 font-normal"> · #{game.bgg_rank} overall</span> : ''}</span>
           </div>
         )}
         {game.bgg_weight && (
