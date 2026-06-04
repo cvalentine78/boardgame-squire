@@ -20,6 +20,15 @@ const PIP_MAP: Record<number, boolean[]> = {
   6: [true, false,true, true, false,true, true, false,true ],
 }
 
+const DIE_SHAPES: Record<number, { points: string; textY: number }> = {
+  4:   { points: '32,5 61,57 3,57',                         textY: 46 },
+  8:   { points: '32,4 60,32 32,60 4,32',                   textY: 36 },
+  10:  { points: '32,4 58,26 46,58 18,58 6,26',             textY: 38 },
+  12:  { points: '32,4 57,20 57,44 32,60 7,44 7,20',        textY: 36 },
+  20:  { points: '32,59 3,7 61,7',                          textY: 40 },
+  100: { points: '32,4 58,26 46,58 18,58 6,26',             textY: 38 },
+}
+
 function DiceFace({ value, sides }: { value: number; sides: number }) {
   if (sides === 6) {
     const pips = PIP_MAP[value] ?? PIP_MAP[1]
@@ -36,7 +45,40 @@ function DiceFace({ value, sides }: { value: number; sides: number }) {
     )
   }
 
-  // Non-d6: styled number card with die label
+  const shape = DIE_SHAPES[sides]
+  if (shape) {
+    const label = sides === 100 ? `${value}` : `${value}`
+    return (
+      <div className="w-16 h-16 flex items-center justify-center flex-shrink-0">
+        <svg viewBox="0 0 64 64" width="64" height="64">
+          <polygon points={shape.points} fill="#4f46e5" stroke="#818cf8" strokeWidth="2" />
+          <text
+            x="32"
+            y={shape.textY}
+            textAnchor="middle"
+            fill="white"
+            fontSize={value >= 100 ? '12' : '16'}
+            fontWeight="bold"
+            fontFamily="sans-serif"
+          >
+            {label}
+          </text>
+          <text
+            x="32"
+            y={shape.textY + 11}
+            textAnchor="middle"
+            fill="#a5b4fc"
+            fontSize="9"
+            fontFamily="sans-serif"
+          >
+            d{sides}
+          </text>
+        </svg>
+      </div>
+    )
+  }
+
+  // Fallback
   return (
     <div className="w-16 h-16 bg-indigo-600 rounded-xl shadow-lg flex flex-col items-center justify-center flex-shrink-0">
       <span className="text-2xl font-bold text-white leading-none">{value}</span>
