@@ -55,11 +55,42 @@ export default function ToolsPage() {
   const [firstPlayer, setFirstPlayer] = useState<string | null>(null)
   const [spinning, setSpinning] = useState(false)
 
+  // Round Tracker
+  const [rtPlayers, setRtPlayers] = useState<string[]>([])
+  const [rtInput, setRtInput] = useState('')
+  const [rtRound, setRtRound] = useState(1)
+  const [rtFirstIdx, setRtFirstIdx] = useState(0)
+
   useEffect(() => {
     getPlayers().then(data => {
       if (Array.isArray(data)) setSavedPlayers(data)
     })
   }, [])
+
+  function rtAddPlayer() {
+    const name = rtInput.trim()
+    if (!name || rtPlayers.includes(name)) return
+    setRtPlayers(prev => [...prev, name])
+    setRtInput('')
+  }
+
+  function rtRemovePlayer(name: string) {
+    setRtPlayers(prev => {
+      const next = prev.filter(p => p !== name)
+      setRtFirstIdx(i => Math.min(i, Math.max(0, next.length - 1)))
+      return next
+    })
+  }
+
+  function rtNextRound() {
+    setRtRound(r => r + 1)
+    setRtFirstIdx(i => (i + 1) % rtPlayers.length)
+  }
+
+  function rtReset() {
+    setRtRound(1)
+    setRtFirstIdx(0)
+  }
 
   function handleRoll() {
     setRolling(true)
@@ -188,6 +219,102 @@ export default function ToolsPage() {
           </div>
         )}
       </div>
+
+      {/* Round Tracker */}
+      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-slate-800">🔄 Round Tracker</h2>
+
+        {/* Player entry */}
+        <div>
+          <label className="text-sm text-slate-500 block mb-2">Players (in seat order)</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={rtInput}
+              onChange={e => setRtInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') rtAddPlayer() }}
+              placeholder="Add player name..."
+              className="flex-1 bg-slate-100 text-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
+            />
+            <button
+              onClick={rtAddPlayer}
+              disabled={!rtInput.trim()}
+              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Quick-add from roster */}
+          {savedPlayers.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {savedPlayers.filter(p => !rtPlayers.includes(p.name)).map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setRtPlayers(prev => [...prev, p.name])}
+                  className="text-xs bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-full transition-colors"
+                >
+                  + {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Player order list */}
+        {rtPlayers.length > 0 && (
+          <div className="space-y-1.5">
+            {rtPlayers.map((name, i) => (
+              <div key={name} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors ${
+                i === rtFirstIdx
+                  ? 'bg-indigo-600 border-indigo-500 text-white'
+                  : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}>
+                <span className="text-sm font-bold w-5 shrink-0 text-center">
+                  {i === rtFirstIdx ? '👑' : `${i + 1}`}
+                </span>
+                <span className="flex-1 font-medium text-sm">{name}</span>
+                {i === rtFirstIdx && (
+                  <span className="text-xs text-indigo-200 font-semibold">First Player</span>
+                )}
+                <button
+                  onClick={() => rtRemovePlayer(name)}
+                  className={`text-xs px-1.5 shrink-0 transition-colors ${i === rtFirstIdx ? 'text-indigo-300 hover:text-white' : 'text-slate-400 hover:text-red-400'}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Round display + controls */}
+        {rtPlayers.length >= 2 && (
+          <div className="space-y-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between">
+              <span className="text-sm text-slate-500 font-medium">Round</span>
+              <span className="text-2xl font-bold text-indigo-600">{rtRound}</span>
+            </div>
+            <button
+              onClick={rtNextRound}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-bold text-sm transition-colors"
+            >
+              Next Round → {rtPlayers[(rtFirstIdx + 1) % rtPlayers.length]} goes first
+            </button>
+            <button
+              onClick={rtReset}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold transition-colors"
+            >
+              Reset to Round 1
+            </button>
+          </div>
+        )}
+
+        {rtPlayers.length === 1 && (
+          <p className="text-sm text-slate-400 text-center">Add at least 2 players to start tracking.</p>
+        )}
+      </div>
+
     </div>
   )
 }
