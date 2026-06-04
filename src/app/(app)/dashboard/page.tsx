@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getSessions } from '@/lib/db'
 
 type Session = {
@@ -43,7 +44,7 @@ export default function DashboardPage() {
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
         <div className="absolute -bottom-12 -left-6 w-56 h-56 rounded-full bg-white/5" />
         <div className="relative">
-          <div className="text-4xl mb-3">🎲</div>
+          <Image src="/logo.jpg" alt="Boardgame Squire" width={64} height={64} className="rounded-xl mb-3" />
           <h1 className="text-2xl md:text-3xl font-bold text-white">Boardgame Squire</h1>
           <p className="text-indigo-200 mt-1 text-sm md:text-base">Your game night companion — track scores, stats, and wins.</p>
           {!loading && activeMatches.length > 0 && (
