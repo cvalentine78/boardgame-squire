@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getPlayers } from '@/lib/db'
+import { getRoundTracker, setRoundTracker, clearRoundTracker, advanceRound, type RoundTrackerState } from '@/lib/round-tracker'
 
 const DICE = [4, 6, 8, 10, 12, 20, 100]
 
@@ -60,11 +61,20 @@ export default function ToolsPage() {
   const [rtInput, setRtInput] = useState('')
   const [rtRound, setRtRound] = useState(1)
   const [rtFirstIdx, setRtFirstIdx] = useState(0)
+  const [rtActive, setRtActive] = useState(false)
 
   useEffect(() => {
     getPlayers().then(data => {
       if (Array.isArray(data)) setSavedPlayers(data)
     })
+    // Restore any active session
+    const saved = getRoundTracker()
+    if (saved) {
+      setRtPlayers(saved.players)
+      setRtRound(saved.round)
+      setRtFirstIdx(saved.firstIdx)
+      setRtActive(saved.active)
+    }
   }, [])
 
   function rtAddPlayer() {
@@ -82,14 +92,25 @@ export default function ToolsPage() {
     })
   }
 
+  function rtStart() {
+    const state: RoundTrackerState = { players: rtPlayers, round: rtRound, firstIdx: rtFirstIdx, active: true }
+    setRoundTracker(state)
+    setRtActive(true)
+  }
+
   function rtNextRound() {
-    setRtRound(r => r + 1)
-    setRtFirstIdx(i => (i + 1) % rtPlayers.length)
+    const current: RoundTrackerState = { players: rtPlayers, round: rtRound, firstIdx: rtFirstIdx, active: true }
+    const next = advanceRound(current)
+    setRoundTracker(next)
+    setRtRound(next.round)
+    setRtFirstIdx(next.firstIdx)
   }
 
   function rtReset() {
     setRtRound(1)
     setRtFirstIdx(0)
+    setRtActive(false)
+    clearRoundTracker()
   }
 
   function handleRoll() {
@@ -295,12 +316,29 @@ export default function ToolsPage() {
               <span className="text-sm text-slate-500 font-medium">Round</span>
               <span className="text-2xl font-bold text-indigo-600">{rtRound}</span>
             </div>
-            <button
-              onClick={rtNextRound}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-bold text-sm transition-colors"
-            >
-              Next Round → {rtPlayers[(rtFirstIdx + 1) % rtPlayers.length]} goes first
-            </button>
+
+            {!rtActive ? (
+              <button
+                onClick={rtStart}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-3 font-bold text-sm transition-colors"
+              >
+                ▶ Start Tracking — opens in score sheet
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-sm text-emerald-700 font-semibold">Active — visible in score sheet</span>
+                </div>
+                <button
+                  onClick={rtNextRound}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-bold text-sm transition-colors"
+                >
+                  Next Round → {rtPlayers[(rtFirstIdx + 1) % rtPlayers.length]} goes first
+                </button>
+              </>
+            )}
+
             <button
               onClick={rtReset}
               className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-semibold transition-colors"

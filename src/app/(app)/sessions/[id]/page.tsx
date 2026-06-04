@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getSession, getSessionPlayers, getScores, upsertScore, deleteSingleScore, updateSession, deleteSession, insertSession, insertPlayers, getMessages, sendMessage } from '@/lib/db'
+import { getRoundTracker, setRoundTracker, advanceRound, type RoundTrackerState } from '@/lib/round-tracker'
 
 type Player = { id: string; name: string; is_winner: boolean }
 type RoundRow = { id: string; scores: Record<string, string> }
@@ -44,6 +45,9 @@ export default function SessionPage() {
   const [cellInput, setCellInput] = useState('')
   const [cellSaving, setCellSaving] = useState(false)
   const cellInputRef = useRef<HTMLInputElement>(null)
+
+  // Round Tracker
+  const [rt, setRt] = useState<RoundTrackerState | null>(null)
 
   // Chat
   const [messages, setMessages] = useState<Message[]>([])
@@ -146,6 +150,16 @@ export default function SessionPage() {
   }, [id])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => {
+    const load = () => {
+      const state = getRoundTracker()
+      setRt(state?.active ? state : null)
+    }
+    load()
+    window.addEventListener('round-tracker-updated', load)
+    return () => window.removeEventListener('round-tracker-updated', load)
+  }, [])
 
   useEffect(() => {
     getMessages(id).then(data => setMessages(data as Message[]))
@@ -415,6 +429,44 @@ export default function SessionPage() {
             disabled={spinning}
             className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-6 py-2 rounded-xl text-sm font-semibold transition-colors">
             {spinning ? 'Picking...' : firstPlayer ? '🔀 Re-roll' : '🔀 Pick First Player'}
+          </button>
+        </div>
+      )}
+
+      {/* Round Tracker */}
+      {rt && (
+        <div className="bg-slate-800 border border-indigo-500/40 rounded-2xl p-4 mb-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+              <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">Round Tracker</p>
+            </div>
+            <span className="text-2xl font-bold text-indigo-400">Round {rt.round}</span>
+          </div>
+
+          {/* Player row */}
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {rt.players.map((name, i) => (
+              <div key={name} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl border shrink-0 transition-colors ${
+                i === rt.firstIdx
+                  ? 'bg-indigo-600 border-indigo-500 text-white'
+                  : 'bg-slate-700 border-slate-600 text-slate-400'
+              }`}>
+                <span className="text-base leading-none">{i === rt.firstIdx ? '👑' : '·'}</span>
+                <span className="text-xs font-semibold">{name}</span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              const next = advanceRound(rt)
+              setRoundTracker(next)
+              setRt(next)
+            }}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-2.5 text-sm font-bold transition-colors"
+          >
+            Next Round → {rt.players[(rt.firstIdx + 1) % rt.players.length]} goes first
           </button>
         </div>
       )}
