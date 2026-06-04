@@ -51,7 +51,7 @@ export default function ToolsPage() {
   const [rolls, setRolls] = useState<number[]>([])
   const [rolling, setRolling] = useState(false)
 
-  const [savedPlayers, setSavedPlayers] = useState<{ id: string; name: string }[]>([])
+  const [savedPlayers, setSavedPlayers] = useState<{ id: string; name: string; avatar: string | null }[]>([])
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [firstPlayer, setFirstPlayer] = useState<string | null>(null)
   const [spinning, setSpinning] = useState(false)
@@ -214,10 +214,10 @@ export default function ToolsPage() {
                         ? 'bg-indigo-600 border-indigo-500 text-white'
                         : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
                     }`}>
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      selected ? 'bg-white/20 text-white' : 'bg-white text-indigo-600'
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                      selected ? 'bg-white/20' : 'bg-white'
                     }`}>
-                      {selected ? '✓' : p.name.slice(0, 1).toUpperCase()}
+                      {p.avatar ? p.avatar : selected ? '✓' : p.name.slice(0, 1).toUpperCase()}
                     </div>
                     <span className="font-medium text-sm">{p.name}</span>
                   </button>
