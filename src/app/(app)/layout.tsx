@@ -5,6 +5,7 @@ import BottomNav from '@/components/BottomNav'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState(true)
@@ -24,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-4xl animate-pulse">🎲</div>
+        <Image src="/logo.jpg" alt="Boardgame Squire" width={80} height={80} className="rounded-2xl animate-pulse" />
       </div>
     )
   }
