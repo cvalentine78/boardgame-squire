@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
@@ -21,7 +22,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-gray-950">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🎲</div>
+          <Image src="/logo.jpg" alt="Boardgame Squire" width={96} height={96} className="rounded-2xl mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-white">Boardgame Squire</h1>
           <p className="text-slate-400 mt-2">Your board game companion</p>
         </div>
