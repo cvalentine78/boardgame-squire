@@ -49,7 +49,7 @@ export default function WhatsNewPage() {
               </header>
               <h3 id="entry-20260605-roundtracker" className="text-white font-semibold">Round Tracker with live first-player crown in the score sheet</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                A new Round Tracker tool in Game Tools lets you set up your players in seat order, then tap &quot;Start Tracking&quot; to activate it. Once active, a panel appears directly inside any open score sheet showing the current round number, every player in their seat position, and a 👑 crown on whoever goes first this round. Hit &quot;Next Round&quot; from either the score sheet or the Tools page to advance the crown clockwise automatically — no more arguments about whose turn it is to pick a role. Works for any game with a rotating first player, not just Puerto Rico.
+                A new Round Tracker tool in Game Tools lets you set up your players in seat order, then tap &quot;Start Tracking&quot; to activate it. Once active, a panel appears directly inside any open score sheet showing the current round number, every player in their seat position, and a 👑 crown on whoever goes first this round. Hit &quot;Next Round&quot; from either the score sheet or the Tools page to advance the crown clockwise automatically — no more arguments about whose turn it is to pick a role. Works for any game with a rotating first player, not just Puerto Rico. The dice roller also got a visual upgrade — each die type now renders its actual polygon shape (triangle for d4, diamond for d8, pentagon for d12, and so on) so you can tell them apart at a glance.
               </p>
             </article>
           </li>
