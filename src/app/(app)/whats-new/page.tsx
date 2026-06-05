@@ -42,6 +42,19 @@ export default function WhatsNewPage() {
         <ol className="space-y-4 list-none">
 
           <li>
+            <article aria-labelledby="entry-20260605-roundtracker" className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-2">
+              <header className="flex items-center gap-3 flex-wrap">
+                <time dateTime="2026-06-05" className="text-xs text-slate-500 font-medium">June 5, 2026</time>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.new}`}>✨ New</span>
+              </header>
+              <h3 id="entry-20260605-roundtracker" className="text-white font-semibold">Round Tracker with live first-player crown in the score sheet</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                A new Round Tracker tool in Game Tools lets you set up your players in seat order, then tap &quot;Start Tracking&quot; to activate it. Once active, a panel appears directly inside any open score sheet showing the current round number, every player in their seat position, and a 👑 crown on whoever goes first this round. Hit &quot;Next Round&quot; from either the score sheet or the Tools page to advance the crown clockwise automatically — no more arguments about whose turn it is to pick a role. Works for any game with a rotating first player, not just Puerto Rico.
+              </p>
+            </article>
+          </li>
+
+          <li>
             <article aria-labelledby="entry-20260601-bgg" className="bg-slate-800 border border-slate-700 rounded-2xl p-5 space-y-2">
               <header className="flex items-center gap-3 flex-wrap">
                 <time dateTime="2026-06-01" className="text-xs text-slate-500 font-medium">June 1, 2026</time>
