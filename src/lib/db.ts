@@ -105,9 +105,12 @@ export async function getSession(id: string) {
 }
 
 export async function insertSession(body: object) {
-  const { data, error } = await db()
+  const client = db()
+  const { data: { session } } = await client.auth.getSession()
+  const userId = session?.user?.id ?? null
+  const { data, error } = await client
     .from('game_sessions')
-    .insert(body)
+    .insert({ ...body, user_id: userId })
     .select()
     .single()
   if (error) throw new Error(error.message)
