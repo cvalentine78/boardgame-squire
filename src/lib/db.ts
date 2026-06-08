@@ -411,13 +411,23 @@ export async function getAllScores() {
 
 export async function getScoresForSessions(sessionIds: string[]) {
   if (sessionIds.length === 0) return []
-  const { data, error } = await db()
-    .from('scores')
-    .select('player_name,points,session_id')
-    .in('session_id', sessionIds)
-    .range(0, 9999)
-  if (error) throw new Error(error.message)
-  return data ?? []
+  const client = db()
+  const PAGE = 1000
+  const all: { player_name: string; points: number; session_id: string }[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await client
+      .from('scores')
+      .select('player_name,points,session_id')
+      .in('session_id', sessionIds)
+      .range(from, from + PAGE - 1)
+    if (error) throw new Error(error.message)
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return all
 }
 
 export async function insertScores(rows: object[]) {
