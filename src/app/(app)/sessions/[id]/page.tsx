@@ -476,7 +476,7 @@ export default function SessionPage() {
         <div className="overflow-x-auto">
           {/* Player headers */}
           <div className="flex border-b-2 border-slate-200">
-            <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 bg-slate-50`} />
+            <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 bg-slate-50 sticky left-0 z-10`} />
             {players.map(p => {
               const total = getTotal(p.name)
               const isLeader = sortedByScore[0]?.name === p.name && total > 0
@@ -495,11 +495,11 @@ export default function SessionPage() {
           {rows.map((row, rowIdx) => (
             <div key={row.id} className="flex border-b border-slate-100 last:border-b-0">
               {hasCategories ? (
-                <div className="w-36 shrink-0 flex items-center px-3 border-r border-slate-200 bg-slate-50">
+                <div className="w-36 shrink-0 flex items-center px-3 border-r border-slate-200 bg-slate-50 sticky left-0 z-10">
                   <span className="text-xs text-slate-600 font-medium leading-tight">{categories[rowIdx] ?? `Round ${rowIdx + 1}`}</span>
                 </div>
               ) : (
-                <div className="w-14 shrink-0 flex items-center justify-between px-2 bg-slate-50 border-r border-slate-100">
+                <div className="w-14 shrink-0 flex items-center justify-between px-2 bg-slate-50 border-r border-slate-100 sticky left-0 z-10">
                   <span className="text-xs text-slate-400 font-medium">R{rowIdx + 1}</span>
                   {!completed && (
                     <button onClick={() => deleteRow(row.id)} className="text-slate-300 hover:text-red-400 text-base transition-colors">🗑</button>
@@ -530,7 +530,7 @@ export default function SessionPage() {
 
           {/* Totals */}
           <div className="flex border-t-2 border-slate-300 bg-slate-100">
-            <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 flex items-center justify-center text-xs text-slate-500 font-bold border-r border-slate-300`}>Σ</div>
+            <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 flex items-center justify-center text-xs text-slate-500 font-bold border-r border-slate-300 sticky left-0 z-10 bg-slate-100`}>Σ</div>
             {players.map(p => {
               const total = getTotal(p.name)
               const isLeader = sortedByScore[0]?.name === p.name && total > 0
