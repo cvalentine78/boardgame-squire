@@ -473,59 +473,75 @@ export default function SessionPage() {
 
       {/* Score Grid */}
       <div className="bg-white rounded-2xl overflow-hidden mb-4 shadow-lg">
-        {/* Player headers */}
-        <div className="flex border-b-2 border-slate-200">
-          <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 bg-slate-50`} />
-          {players.map(p => {
-            const total = getTotal(p.name)
-            const isLeader = sortedByScore[0]?.name === p.name && total > 0
-            return (
-              <div key={p.id} className="flex-1 flex items-center justify-center gap-1.5 py-3 px-2 border-l border-slate-200 bg-slate-50">
-                <div className="text-sm font-bold text-slate-700 truncate">{p.name}</div>
-                <div className={`text-sm font-bold shrink-0 ${isLeader ? 'text-indigo-600' : 'text-slate-400'}`}>
-                  {total > 0 ? total : '—'}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Score rows */}
-        {rows.map((row, rowIdx) => (
-          <div key={row.id} className="flex border-b border-slate-100 last:border-b-0">
-            {hasCategories ? (
-              <div className="w-36 shrink-0 flex items-center px-3 border-r border-slate-200 bg-slate-50">
-                <span className="text-xs text-slate-600 font-medium leading-tight">{categories[rowIdx] ?? `Round ${rowIdx + 1}`}</span>
-              </div>
-            ) : (
-              <div className="w-14 shrink-0 flex items-center justify-between px-2 bg-slate-50 border-r border-slate-100">
-                <span className="text-xs text-slate-400 font-medium">R{rowIdx + 1}</span>
-                {!completed && (
-                  <button onClick={() => deleteRow(row.id)} className="text-slate-300 hover:text-red-400 text-base transition-colors">🗑</button>
-                )}
-              </div>
-            )}
+        <div className="overflow-x-auto">
+          {/* Player headers */}
+          <div className="flex border-b-2 border-slate-200">
+            <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 bg-slate-50`} />
             {players.map(p => {
-              const val = row.scores[p.name]
+              const total = getTotal(p.name)
+              const isLeader = sortedByScore[0]?.name === p.name && total > 0
               return (
-                <div key={p.id} className="flex-1 border-l border-slate-100">
-                  {completed ? (
-                    <div className="text-center py-3 text-sm text-slate-700 font-medium">{val ?? '—'}</div>
-                  ) : (
-                    <button
-                      onClick={() => openCell(row.id, p.name, rowIdx)}
-                      className={`w-full py-3 text-sm font-medium text-center transition-colors hover:bg-indigo-50 active:bg-indigo-100 ${
-                        val !== undefined ? 'text-slate-800' : 'text-slate-300'
-                      }`}
-                    >
-                      {val ?? '—'}
-                    </button>
-                  )}
+                <div key={p.id} className="flex-1 min-w-[5rem] flex flex-col items-center justify-center py-2.5 px-2 border-l border-slate-200 bg-slate-50">
+                  <div className="text-sm font-bold text-slate-700 text-center leading-tight">{p.name}</div>
+                  <div className={`text-xs font-bold mt-0.5 ${isLeader ? 'text-indigo-600' : 'text-slate-400'}`}>
+                    {total > 0 ? total : '—'}
+                  </div>
                 </div>
               )
             })}
           </div>
-        ))}
+
+          {/* Score rows */}
+          {rows.map((row, rowIdx) => (
+            <div key={row.id} className="flex border-b border-slate-100 last:border-b-0">
+              {hasCategories ? (
+                <div className="w-36 shrink-0 flex items-center px-3 border-r border-slate-200 bg-slate-50">
+                  <span className="text-xs text-slate-600 font-medium leading-tight">{categories[rowIdx] ?? `Round ${rowIdx + 1}`}</span>
+                </div>
+              ) : (
+                <div className="w-14 shrink-0 flex items-center justify-between px-2 bg-slate-50 border-r border-slate-100">
+                  <span className="text-xs text-slate-400 font-medium">R{rowIdx + 1}</span>
+                  {!completed && (
+                    <button onClick={() => deleteRow(row.id)} className="text-slate-300 hover:text-red-400 text-base transition-colors">🗑</button>
+                  )}
+                </div>
+              )}
+              {players.map(p => {
+                const val = row.scores[p.name]
+                return (
+                  <div key={p.id} className="flex-1 min-w-[5rem] border-l border-slate-100">
+                    {completed ? (
+                      <div className="text-center py-3 text-sm text-slate-700 font-medium">{val ?? '—'}</div>
+                    ) : (
+                      <button
+                        onClick={() => openCell(row.id, p.name, rowIdx)}
+                        className={`w-full py-3 text-sm font-medium text-center transition-colors hover:bg-indigo-50 active:bg-indigo-100 ${
+                          val !== undefined ? 'text-slate-800' : 'text-slate-300'
+                        }`}
+                      >
+                        {val ?? '—'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+
+          {/* Totals */}
+          <div className="flex border-t-2 border-slate-300 bg-slate-100">
+            <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 flex items-center justify-center text-xs text-slate-500 font-bold border-r border-slate-300`}>Σ</div>
+            {players.map(p => {
+              const total = getTotal(p.name)
+              const isLeader = sortedByScore[0]?.name === p.name && total > 0
+              return (
+                <div key={p.id} className={`flex-1 min-w-[5rem] text-center py-3 font-bold border-l border-slate-200 text-lg ${isLeader ? 'text-indigo-600' : 'text-slate-800'}`}>
+                  {total}
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
         {!completed && (
           <button onClick={addRow}
@@ -533,20 +549,6 @@ export default function SessionPage() {
             + Add Round
           </button>
         )}
-
-        {/* Totals */}
-        <div className="flex border-t-2 border-slate-300 bg-slate-100">
-          <div className={`${hasCategories ? 'w-36' : 'w-14'} shrink-0 flex items-center justify-center text-xs text-slate-500 font-bold border-r border-slate-300`}>Σ</div>
-          {players.map(p => {
-            const total = getTotal(p.name)
-            const isLeader = sortedByScore[0]?.name === p.name && total > 0
-            return (
-              <div key={p.id} className={`flex-1 text-center py-3 font-bold border-l border-slate-200 text-lg ${isLeader ? 'text-indigo-600' : 'text-slate-800'}`}>
-                {total}
-              </div>
-            )
-          })}
-        </div>
       </div>
 
       {/* Standings */}
