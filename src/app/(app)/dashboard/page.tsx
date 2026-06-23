@@ -19,7 +19,7 @@ const ACTIONS = [
   { href: '/stats',        label: 'Stats',        icon: '📊', desc: 'Scores & leaderboard'                    },
   { href: '/tools',        label: 'Dice & Tools', icon: '🎯', desc: 'Dice roller & timers'                    },
   { href: '/players',      label: 'Players',      icon: '👥', desc: 'Manage your roster'                      },
-  { href: '/party',        label: 'Party',        icon: '🎉', desc: 'Share with friends'                      },
+  { href: '/friends',      label: 'Friends',      icon: '👫', desc: 'Share with friends'                      },
   { href: '/whats-new',    label: "What's New",   icon: '📣', desc: 'Latest updates',          dark: true     },
 ]
 

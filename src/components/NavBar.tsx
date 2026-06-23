@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/games',     label: 'Games' },
   { href: '/players',   label: 'Players' },
   { href: '/stats',     label: 'Stats' },
+  { href: '/friends',   label: 'Friends' },
 ]
 
 export default function NavBar() {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getAllSessionPlayers, getScoresForSessions, getMyParties } from '@/lib/db'
+import { getAllSessionPlayers, getScoresForSessions } from '@/lib/db'
 
 type Row = {
   player_name: string
@@ -28,13 +28,9 @@ type GameStat = {
   players: GamePlayerStat[]
 }
 
-type Party = { id: string; name: string; game_id: string | null; game_name: string | null }
-
 export default function StatsPage() {
   const [allRows, setAllRows] = useState<Row[]>([])
   const [allScores, setAllScores] = useState<ScoreRow[]>([])
-  const [parties, setParties] = useState<Party[]>([])
-  const [selectedPartyId, setSelectedPartyId] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([])
@@ -42,33 +38,20 @@ export default function StatsPage() {
   const [totalSessions, setTotalSessions] = useState(0)
 
   useEffect(() => {
-    Promise.all([getAllSessionPlayers(), getMyParties()]).then(async ([rows, partyList]) => {
+    getAllSessionPlayers().then(async rows => {
       setAllRows(rows ?? [])
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setParties((partyList as any[]).filter(p => p.game_id))
-
-      // Fetch scores only for the sessions we know about — avoids RLS issues
-      // that occur when querying the scores table without a session_id filter
       const sessionIds = [...new Set((rows ?? []).map((r: Row) => r.session_id))]
       const scoreRows = await getScoresForSessions(sessionIds)
       setAllScores(scoreRows ?? [])
-
       setLoading(false)
     })
   }, [])
 
-  // Recompute stats whenever filter changes
+  // Recompute stats whenever data changes
   useEffect(() => {
     if (loading) return
 
-    const selectedParty = parties.find(p => p.id === selectedPartyId) ?? null
-    const filterGameName = selectedParty?.game_name ?? null
-
-    const completed = allRows.filter((r: Row) => {
-      if (r.game_sessions?.status !== 'completed') return false
-      if (filterGameName && r.game_sessions?.games?.name !== filterGameName) return false
-      return true
-    })
+    const completed = allRows.filter((r: Row) => r.game_sessions?.status === 'completed')
 
     // Build per-session totals
     const sessionTotals: Record<string, Record<string, number>> = {}
@@ -143,10 +126,9 @@ export default function StatsPage() {
         }))
         .sort((a, b) => b.sessions - a.sessions)
     )
-  }, [allRows, allScores, selectedPartyId, parties, loading])
+  }, [allRows, allScores, loading])
 
   const medal = ['🥇', '🥈', '🥉']
-  const selectedParty = parties.find(p => p.id === selectedPartyId) ?? null
 
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>
 
@@ -154,51 +136,10 @@ export default function StatsPage() {
     <div className="space-y-6 pb-6">
       <h1 className="text-2xl font-bold text-white">Stats</h1>
 
-      {/* Party filter */}
-      {parties.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 space-y-2 shadow-sm">
-          <label className="block text-xs text-slate-500 uppercase tracking-wide font-bold">Filter by Party</label>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedPartyId('')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
-                !selectedPartyId
-                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              All games
-            </button>
-            {parties.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPartyId(p.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
-                  selectedPartyId === p.id
-                    ? 'bg-indigo-600 border-indigo-500 text-white'
-                    : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {p.name}
-              </button>
-            ))}
-          </div>
-          {selectedParty?.game_name && (
-            <p className="text-xs text-indigo-500 font-medium pt-1">
-              🎲 Showing {selectedParty.game_name} stats only
-            </p>
-          )}
-        </div>
-      )}
-
       {/* Total sessions */}
       <div className="bg-white rounded-xl p-4 text-center shadow-sm">
         <div className="text-3xl font-bold text-indigo-600">{totalSessions}</div>
-        <div className="text-sm text-slate-500 mt-1">
-          {selectedParty?.game_name
-            ? `${selectedParty.game_name} Matches`
-            : 'Total Games Played'}
-        </div>
+        <div className="text-sm text-slate-500 mt-1">Total Games Played</div>
       </div>
 
       {playerStats.length > 0 ? (
@@ -289,11 +230,7 @@ export default function StatsPage() {
         <div className="text-center py-16 text-slate-400">
           <div className="text-4xl mb-2">📊</div>
           <p>No completed games yet</p>
-          <p className="text-sm mt-1">
-            {selectedParty?.game_name
-              ? `Finish a match of ${selectedParty.game_name} to see stats here`
-              : 'Stats will appear after you finish a match'}
-          </p>
+          <p className="text-sm mt-1">Stats will appear after you finish a match</p>
         </div>
       )}
     </div>

@@ -210,159 +210,97 @@ export async function deletePlayer(id: string) {
   if (error) throw new Error(error.message)
 }
 
-// Parties
-function generateInviteCode() {
+// Friends
+
+function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no O/0 or I/1
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-export async function getMyParty() {
+export async function getMyInviteCode(): Promise<string> {
   const client = db()
   const { data: { session } } = await client.auth.getSession()
   const user = session?.user
-  if (!user) return null
+  if (!user) throw new Error('Not signed in')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: membership } = await (client as any)
-    .from('party_members')
-    .select('party_id, parties(id, name, invite_code)')
+  const displayName = (user.user_metadata?.full_name as string) ?? user.email ?? 'Player'
+
+  const { data: existing } = await client
+    .from('invite_codes')
+    .select('code')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .single()
 
-  if (!membership) return null
+  if (existing) {
+    // Keep the same code but refresh display_name in case it changed
+    await client.from('invite_codes').update({ display_name: displayName }).eq('user_id', user.id)
+    return existing.code
+  }
 
-  const party = Array.isArray(membership.parties) ? membership.parties[0] : membership.parties
-  if (!party) return null
-
-  const { data: members } = await client
-    .from('party_members')
-    .select('user_id, display_name, joined_at')
-    .eq('party_id', membership.party_id)
-    .order('joined_at')
-
-  return { ...party, members: members ?? [], myUserId: user.id }
+  const code = generateCode()
+  await client.from('invite_codes').insert({ user_id: user.id, code, display_name: displayName })
+  return code
 }
 
-export async function getMyParties() {
+export async function getFriends() {
   const client = db()
   const { data: { session } } = await client.auth.getSession()
   const user = session?.user
   if (!user) return []
 
-  // Try with game join first; fall back to basic select if game_id column doesn't exist yet
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let memberships: any[] | null = null
-  let hasGameColumn = true
+  const { data, error } = await client
+    .from('friends')
+    .select('id, requester_id, addressee_id, requester_name, addressee_name, created_at')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    .order('created_at')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: mFull, error: mErr } = await (client as any)
-    .from('party_members')
-    .select('party_id, parties(id, name, invite_code, game_id, games(name))')
-    .eq('user_id', user.id)
-
-  if (mErr) {
-    hasGameColumn = false
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: mBasic } = await (client as any)
-      .from('party_members')
-      .select('party_id, parties(id, name, invite_code)')
-      .eq('user_id', user.id)
-    memberships = mBasic
-  } else {
-    memberships = mFull
-  }
-
-  if (!memberships || memberships.length === 0) return []
-
-  const result = []
-  for (const m of memberships) {
-    const party = Array.isArray(m.parties) ? m.parties[0] : m.parties
-    if (!party) continue
-
-    const { data: members } = await client
-      .from('party_members')
-      .select('user_id, display_name, joined_at')
-      .eq('party_id', m.party_id)
-      .order('joined_at')
-
-    const game = hasGameColumn ? (Array.isArray(party.games) ? party.games[0] : party.games) : null
-    result.push({
-      ...party,
-      game_id: party.game_id ?? null,
-      game_name: game?.name ?? null,
-      members: members ?? [],
-      myUserId: user.id,
-    })
-  }
-  return result
-}
-
-export async function updateParty(partyId: string, fields: { name?: string; game_id?: string | null }) {
-  const { error } = await db()
-    .from('parties')
-    .update(fields)
-    .eq('id', partyId)
   if (error) throw new Error(error.message)
+
+  return (data ?? []).map(f => ({
+    id: f.id,
+    friendUserId: f.requester_id === user.id ? f.addressee_id : f.requester_id,
+    friendName: f.requester_id === user.id ? f.addressee_name : f.requester_name,
+    since: f.created_at as string,
+  }))
 }
 
-export async function createParty(name: string, gameId?: string | null) {
+export async function addFriendByCode(code: string): Promise<string> {
   const client = db()
   const { data: { session } } = await client.auth.getSession()
   const user = session?.user
   if (!user) throw new Error('Not signed in')
 
-  const { data: party, error } = await client
-    .from('parties')
-    .insert({ name, invite_code: generateInviteCode(), created_by: user.id, game_id: gameId ?? null })
-    .select()
+  const { data: invite, error: findErr } = await client
+    .from('invite_codes')
+    .select('user_id, display_name')
+    .eq('code', code.toUpperCase().trim())
     .single()
-  if (error) throw new Error(error.message)
 
-  const displayName = (user.user_metadata?.full_name as string) ?? user.email ?? 'Unknown'
-  const { error: me } = await client
-    .from('party_members')
-    .insert({ party_id: party.id, user_id: user.id, display_name: displayName })
-  if (me) throw new Error(me.message)
+  if (findErr || !invite) throw new Error('Code not found. Check the code and try again.')
+  if (invite.user_id === user.id) throw new Error("That's your own code!")
 
-  return party
-}
+  const myName = (user.user_metadata?.full_name as string) ?? user.email ?? 'Player'
 
-export async function joinPartyByCode(code: string) {
-  const client = db()
-  const { data: { session } } = await client.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Not signed in')
+  const { error } = await client.from('friends').insert({
+    requester_id: user.id,
+    addressee_id: invite.user_id,
+    requester_name: myName,
+    addressee_name: invite.display_name,
+  })
 
-  const { data: party, error: findErr } = await client
-    .from('parties')
-    .select('id, name')
-    .eq('invite_code', code.toUpperCase().trim())
-    .maybeSingle()
-  if (findErr || !party) throw new Error('Party not found. Check the code and try again.')
-
-  const displayName = (user.user_metadata?.full_name as string) ?? user.email ?? 'Unknown'
-  const { error } = await client
-    .from('party_members')
-    .insert({ party_id: party.id, user_id: user.id, display_name: displayName })
   if (error) {
-    if (error.code === '23505') throw new Error("You're already in this party.")
+    if (error.code === '23505') throw new Error("You're already friends!")
     throw new Error(error.message)
   }
 
-  return party
+  return invite.display_name as string
 }
 
-export async function leaveParty(partyId: string) {
-  const client = db()
-  const { data: { session } } = await client.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Not signed in')
-
-  const { error } = await client
-    .from('party_members')
+export async function removeFriend(friendshipId: string) {
+  const { error } = await db()
+    .from('friends')
     .delete()
-    .eq('party_id', partyId)
-    .eq('user_id', user.id)
+    .eq('id', friendshipId)
   if (error) throw new Error(error.message)
 }
 
