@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getSessions, getScoresForSessions } from '@/lib/db'
+import { getSessions, getScoresForSessions, deleteSession } from '@/lib/db'
 
 type Session = {
   id: string
@@ -25,26 +25,34 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [sessionTotals, setSessionTotals] = useState<Record<string, Record<string, number>>>({})
   const [loading, setLoading] = useState(true)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function reload() {
+    const sessionData = await getSessions()
+    const all: Session[] = Array.isArray(sessionData) ? sessionData : []
+    setSessions(all)
+    const sessionIds = all.map(s => s.id)
+    const scoreData = await getScoresForSessions(sessionIds)
+    const totals: Record<string, Record<string, number>> = {}
+    ;(scoreData ?? []).forEach((s: ScoreRow) => {
+      if (!totals[s.session_id]) totals[s.session_id] = {}
+      totals[s.session_id][s.player_name] = (totals[s.session_id][s.player_name] ?? 0) + s.points
+    })
+    setSessionTotals(totals)
+  }
 
   useEffect(() => {
-    getSessions().then(async (sessionData) => {
-      const all: Session[] = Array.isArray(sessionData) ? sessionData : []
-      setSessions(all)
-
-      // Fetch scores only for the sessions we know about —
-      // avoids RLS silently dropping rows on an unfiltered scores query
-      const sessionIds = all.map(s => s.id)
-      const scoreData = await getScoresForSessions(sessionIds)
-
-      const totals: Record<string, Record<string, number>> = {}
-      ;(scoreData ?? []).forEach((s: ScoreRow) => {
-        if (!totals[s.session_id]) totals[s.session_id] = {}
-        totals[s.session_id][s.player_name] = (totals[s.session_id][s.player_name] ?? 0) + s.points
-      })
-      setSessionTotals(totals)
-      setLoading(false)
-    })
+    reload().then(() => setLoading(false))
   }, [])
+
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    await deleteSession(id)
+    setConfirmDeleteId(null)
+    setDeleting(false)
+    await reload()
+  }
 
   const active = sessions.filter(s => s.status === 'active')
   const completed = sessions.filter(s => s.status === 'completed')
@@ -54,56 +62,97 @@ export default function SessionsPage() {
     const players = session.session_players ?? []
     const hasScores = Object.keys(scores).length > 0
     const isCompleted = session.status === 'completed'
+    const isConfirming = confirmDeleteId === session.id
 
     const sortedPlayers = [...players].sort((a, b) => {
       if (isCompleted && hasScores) return (scores[b.player_name] ?? 0) - (scores[a.player_name] ?? 0)
       return 0
     })
 
-    return (
-      <Link href={`/sessions/${session.id}`}
-        className="block bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors overflow-hidden">
-        {/* Header row */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-1">
-          <span className="font-semibold text-slate-800">{session.games?.name ?? 'Unknown game'}</span>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-            isCompleted ? 'bg-slate-100 text-slate-500' : 'bg-green-100 text-green-700'
-          }`}>
-            {isCompleted ? 'done' : 'active'}
-          </span>
-        </div>
-
-        {/* Date */}
-        <div className="px-4 pb-2">
-          <span className="text-xs text-slate-400">{formatDate(session.created_at)}</span>
-        </div>
-
-        {/* Player scores */}
-        {sortedPlayers.length > 0 && (
-          <div className="px-4 pb-3 flex flex-wrap gap-2">
-            {sortedPlayers.map(p => {
-              const isWinner = session.winner_name === p.player_name
-              const score = scores[p.player_name]
-              return (
-                <div key={p.player_name}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm ${
-                    isWinner
-                      ? 'bg-yellow-100 text-yellow-800 font-semibold'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                  {isWinner && <span>🏆</span>}
-                  <span>{p.player_name}</span>
-                  {score !== undefined && (
-                    <span className={`font-bold ${isWinner ? 'text-yellow-700' : 'text-slate-800'}`}>
-                      {score}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
+    if (isConfirming) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-3">
+          <p className="text-sm text-red-700 font-medium">
+            Delete <span className="font-bold">{session.games?.name ?? 'this match'}</span>? This cannot be undone.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setConfirmDeleteId(null)}
+              className="flex-1 py-2 rounded-lg bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleDelete(session.id)}
+              disabled={deleting}
+              className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
           </div>
-        )}
-      </Link>
+        </div>
+      )
+    }
+
+    return (
+      <div className="relative group">
+        <Link href={`/sessions/${session.id}`}
+          className="block bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors overflow-hidden">
+          {/* Header row */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-1 pr-10">
+            <span className="font-semibold text-slate-800">{session.games?.name ?? 'Unknown game'}</span>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+              isCompleted ? 'bg-slate-100 text-slate-500' : 'bg-green-100 text-green-700'
+            }`}>
+              {isCompleted ? 'done' : 'active'}
+            </span>
+          </div>
+
+          {/* Date */}
+          <div className="px-4 pb-2">
+            <span className="text-xs text-slate-400">{formatDate(session.created_at)}</span>
+          </div>
+
+          {/* Player scores */}
+          {sortedPlayers.length > 0 ? (
+            <div className="px-4 pb-3 flex flex-wrap gap-2">
+              {sortedPlayers.map(p => {
+                const isWinner = session.winner_name === p.player_name
+                const score = scores[p.player_name]
+                return (
+                  <div key={p.player_name}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm ${
+                      isWinner
+                        ? 'bg-yellow-100 text-yellow-800 font-semibold'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                    {isWinner && <span>🏆</span>}
+                    <span>{p.player_name}</span>
+                    {score !== undefined && (
+                      <span className={`font-bold ${isWinner ? 'text-yellow-700' : 'text-slate-800'}`}>
+                        {score}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="px-4 pb-3">
+              <span className="text-xs text-slate-400 italic">No players</span>
+            </div>
+          )}
+        </Link>
+
+        {/* Delete button — sits outside the Link so it doesn't navigate */}
+        <button
+          onClick={() => setConfirmDeleteId(session.id)}
+          className="absolute top-2.5 right-2.5 p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+          title="Delete match"
+        >
+          🗑
+        </button>
+      </div>
     )
   }
 

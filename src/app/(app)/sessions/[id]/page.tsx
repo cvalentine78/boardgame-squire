@@ -34,6 +34,7 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true)
   const [winner, setWinner] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [rematching, setRematching] = useState(false)
 
   // Who goes first
   const [firstPlayer, setFirstPlayer] = useState<string | null>(null)
@@ -328,7 +329,9 @@ export default function SessionPage() {
   }
 
   async function handleRematch() {
-    if (!session) return
+    if (!session || rematching) return
+    setRematching(true)
+    let newSessionId: string | null = null
     try {
       const code = Math.random().toString(36).substring(2, 7).toUpperCase()
       const newSession = await insertSession({
@@ -336,6 +339,7 @@ export default function SessionPage() {
         join_code: code,
         status: 'active',
       })
+      newSessionId = newSession.id
       await insertPlayers(
         players.map((p, i) => ({
           session_id: newSession.id,
@@ -346,6 +350,11 @@ export default function SessionPage() {
       router.push(`/sessions/${newSession.id}`)
     } catch (err) {
       console.error('Error starting rematch:', err)
+      // Clean up the session if players failed to insert
+      if (newSessionId) {
+        try { await deleteSession(newSessionId) } catch { /* ignore */ }
+      }
+      setRematching(false)
     }
   }
 
@@ -624,8 +633,9 @@ export default function SessionPage() {
             </button>
             <button
               onClick={handleRematch}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold transition-colors">
-              🔁 Rematch
+              disabled={rematching}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl py-3 font-semibold transition-colors">
+              {rematching ? 'Starting...' : '🔁 Rematch'}
             </button>
           </div>
         </div>
