@@ -51,13 +51,13 @@ export default function WhatsNewPage() {
               </header>
               <h3 id="entry-20260623-friends" className="text-white font-semibold">Friends replaces Parties, score sheet scrolls with 4+ players, rematch reliability fixes</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                The Party system has been replaced with a simpler <strong className="text-slate-300">Friends</strong> feature. Each account now has a permanent 6-character invite code — share yours with a friend, enter theirs, and you&apos;re connected. Trusted friends can see each other&apos;s game library, matches, and stats without any per-game setup. You can remove a friend at any time from the Friends page.
+                The Party system has been replaced with a simpler <strong className="text-slate-300">Friends</strong> feature. Each account now has a permanent 6-character invite code. Share yours with a friend, enter theirs, and you&apos;re connected. Trusted friends can see each other&apos;s game library, matches, and stats without any per-game setup. You can remove a friend at any time from the Friends page.
               </p>
               <p className="text-slate-400 text-sm leading-relaxed">
                 The score sheet now scrolls horizontally when there are more than two or three players, and the category column stays pinned to the left so you always know which row you&apos;re scoring. A security audit also fixed several access-control gaps that allowed any signed-in user to read or write data that should have been private.
               </p>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Tapping Rematch quickly on mobile could create duplicate matches with no player names. The button now locks after the first tap and cleans up automatically if anything goes wrong mid-create. The Matches list also has a new 🗑 trash button on every card so you can delete a match directly from the list without having to open it first — handy for clearing any orphaned matches.
+                Tapping Rematch quickly on mobile could create duplicate matches with no player names. The button now locks after the first tap and cleans up automatically if anything goes wrong mid-create. The Matches list also has a new 🗑 trash button on every card so you can delete a match directly from the list without having to open it first. This makes it easy to clear any orphaned matches.
               </p>
             </article>
           </li>
