@@ -185,9 +185,8 @@ export default function StatsPage() {
             </div>
           </div>
 
-          {/* By Game — only show when not already filtered to one game */}
-          {!selectedParty?.game_name && (
-            <div>
+          {/* By Game */}
+          <div>
               <h2 className="text-lg font-semibold mb-3 text-white">By Game</h2>
               <div className="space-y-3">
                 {gameStats.map(g => (
@@ -224,7 +223,7 @@ export default function StatsPage() {
                 ))}
               </div>
             </div>
-          )}
+          </div>
         </>
       ) : (
         <div className="text-center py-16 text-slate-400">
