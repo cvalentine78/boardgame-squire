@@ -223,7 +223,6 @@ export default function StatsPage() {
                 ))}
               </div>
             </div>
-          </div>
         </>
       ) : (
         <div className="text-center py-16 text-slate-400">
